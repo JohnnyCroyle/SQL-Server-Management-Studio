@@ -1,0 +1,25 @@
+        -- Crosstab each surgery case into 6 procedure using a CTE
+        with cptList as (
+            select PatientDurableKey, PatientKey
+                , max(case when rn = 1 then Cpt end) as CPT1
+                , max(case when rn = 2 then Cpt end) as CPT2
+                , max(case when rn = 3 then Cpt end) as CPT3
+                , max(case when rn = 4 then Cpt end) as CPT4
+                , max(case when rn = 5 then Cpt end) as CPT5
+                , max(case when rn = 6 then Cpt end) as CPT6
+            from (
+                select top 6 with ties 
+                    pat.PatientDurableKey, 
+                    pat.PatientKey, 
+                    coalesce(pro.CptCode, pro.Code) as Cpt,
+                    ROW_NUMBER() over (partition by pat.PatientDurableKey order by pro.ProcedureKey) as rn
+                from #inpatients pat
+                inner join CDW_report.FullAccess.ProcedureBridge pro with (nolock) 
+                    on pat.DiagnosisComboKey = pro.ProcedureComboKey
+                order by ROW_NUMBER() over (partition by pat.PatientDurableKey order by pat.PatientKey)
+            ) t
+            group by PatientDurableKey, PatientKey
+        )
+        
+        -- Example usage:
+        select * from cptList;
