@@ -26,7 +26,10 @@ SELECT
                 ha.AdmissionSource,
                 DischargeDisposition,
                 PatientClass,
-				DiagnosisComboKey
+				DiagnosisComboKey,
+				AdmissionTimeOfDayKey,
+				DischargeTimeOfDayKey,
+				bill.AdmissionDateKey
             FROM CDW_report.FullAccess.EncounterFact ha WITH (NOLOCK)
                 INNER JOIN CDW_report.dbo.DurationDim d WITH (NOLOCK) ON ha.AgeKey = d.DurationKey 
                 LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON ha.PatientDurableKey = bill.PatientDurableKey
@@ -73,7 +76,9 @@ SELECT
 
 
 SELECT DISTINCT
-    [Survey Designator] = 'IN0101',
+dep.DepartmentEpicId,
+
+    [Survey Designator] = survey.SurveyDesignator,
     [Client ID] = loc.PressGaneyId,
     [Last Name] = pat.LastName,
     [Middle Initial] = LEFT(pat.MiddleName, 1),
@@ -105,10 +110,9 @@ SELECT DISTINCT
     [Site state] = dep.StateOrProvinceAbbreviation,
     [Site zip] = dep.PostalCode,
     [Patient Admission Source] = inpat.AdmissionSourceCode,
-    [Visit or Admit Date] = DTime.DisplayString24Hour,
-    [Visit or Admit Time] = Atime.DisplayString24Hour,
-    [Discharge Date] = FORMAT(inpat.DischargeInstant, 'MMddyyyy'),
-    [Discharge Time] = DTime.DisplayString24Hour,
+	--[Visit or Admit Date] = Atime.DisplayString24Hour, 
+	--[Visit or Admit Time] = Atime.DisplayString24Hour, -- optional
+	--[Discharge Date] = format(inpat.DischargeInstant, 'MMddyyyy'),
     [Patient Discharge Status] = inpat.DischargeDispositionCode,
     [Unit] = dep.DepartmentName,
     [Service] = HospitalService,
@@ -135,7 +139,8 @@ SELECT DISTINCT
     [No Publicity Flag] = 'N',
     [State Regulation Flag] = 'N',
     [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
-    [Transferred/admitted to inpatient] = ''
+    [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.Type = 'Surgery'  THEN 'Y' ELSE 'N' END,
+	'$' EOR
 FROM CDW_report.FullAccess.EncounterFact inpat
 	INNER JOIN Patients35Days as encount ON  inpat.EncounterKey = encount.EncounterKey 
 	INNER JOIN CDW_Report.FullAccess.PatientDim pat WITH (NOLOCK) ON inpat.PatientDurableKey = pat.DurableKey AND inpat.PatientKey = pat.PatientKey
@@ -144,20 +149,34 @@ FROM CDW_report.FullAccess.EncounterFact inpat
 	LEFT JOIN CDW_report.FullAccess.DrgDim drg WITH (NOLOCK )ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
 	LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
 	INNER JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm WITH (NOLOCK)	ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
-	LEFT JOIN CDW_Report.FullAccess.TimeOfDayDim Atime WITH (NOLOCK) ON inpat.AdmissionDateKey = Atime.TimeOfDayKey
-	LEFT JOIN CDW_Report.FullAccess.TimeOfDayDim DTime WITH (NOLOCK) ON inpat.DischargeDateKey = DTime.TimeOfDayKey
+	--LEFT JOIN CDW_Report.FullAccess.TimeOfDayDim Atime WITH (NOLOCK) ON encount.AdmissionDateKey = Atime.TimeOfDayKey
+	--LEFT JOIN CDW_Report.FullAccess.TimeOfDayDim DTime WITH (NOLOCK) ON inpat.DischargeDateKey = DTime.TimeOfDayKey
 	LEFT JOIN CDW_report.FullAccess.CoverageDim cov WITH (NOLOCK) ON inpat.PrimaryCoverageKey = cov.CoverageKey	
 	LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc WITH (NOLOCK) ON inpat.DepartmentKey = loc.DepartmentKey
 	LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha WITH (NOLOCK)	ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
 	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq WITH (NOLOCK)	ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey
 	LEFT JOIN CDW_report.FullAccess.DepartmentDim bed WITH (NOLOCK)	ON bed.DepartmentKey = bedreq.DestinationBedKey AND bed.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON pat.DurableKey = mn.PatientDurableKey AND mn.rn = 1
-	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey 
+	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
+	LEFT JOIN [ETLProcedureRepository].[dbo].[PressGaneySurveyMap] as survey WITH (NOLOCK) ON dep.DepartmentEpicId = survey.DepartmentEpicId
 WHERE inpat.DischargeDateKey BETWEEN @StartDateInt AND @EndDateInt 
+and survey.SurveyDesignator is NOT NULL
 
 
 
 
+
+--Admitted as an Inpatient to this Hospital?
+
+--Select  * from CDW_report.FullAccess.EncounterFact   Where DischargeDisposition =  'Admitted as an Inpatient to this Hospital' and Type = 'Surgery' 
+
+
+--Select  *  from CDW_report.FullAccess.EncounterFact  where PatientClassCategoryKey = '11004010'
+
+
+----Select *  from  CDW_report.FullAccess.SurgicalCaseFact
+
+--Select * from CDW_Report.FullAccess.ProviderDim where PrimaryDepartmentEpicId = '11004010'
 
 
 
