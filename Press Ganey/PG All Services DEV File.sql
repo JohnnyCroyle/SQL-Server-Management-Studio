@@ -100,7 +100,7 @@ SELECT
 -- Select the required fields and format them as per the new Press Ganey file format
 -- Ensure to handle NULL values and format dates correctly
 SELECT DISTINCT
-    [Survey Designator] = 'OU0101',
+    [Survey Designator] = 'OU0101', --TODO: Update this to the correct survey designator if needed
     [Client ID] = loc.PressGaneyId,
     [Last Name] = pat.LastName,
     [Middle Initial] = LEFT(pat.MiddleName, 1),
