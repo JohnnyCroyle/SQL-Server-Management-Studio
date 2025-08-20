@@ -14,8 +14,8 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE TABLE [Aetna].[CodesLookup](
-	[code] [nvarchar](50) NULL,
-	[code_value] [nvarchar](255) NULL,
+	[code] [nvarchar](max) NULL,
+	[code_value] [nvarchar](max) NULL,
 	[code_desc] [nvarchar](max) NULL,
 	[lkup_code] [nvarchar](max) NULL,
 	[lkup_value] [nvarchar](max) NULL,
