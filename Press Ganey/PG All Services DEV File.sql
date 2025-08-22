@@ -12,7 +12,7 @@
 ------ =============================================*/
 
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/07/2025',
+        @EndDate   VARCHAR(10) = '01/17/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
@@ -48,7 +48,8 @@ SELECT
 				AdmissionSourceCode,
 				DischargeDispositionCode,
 				bill.AttendingProviderDurableKey,
-				ProviderKey
+				ProviderKey,
+				loc.ServiceAreaEpicId
             FROM CDW_report.FullAccess.EncounterFact ha 
                 INNER JOIN CDW_report.dbo.DurationDim d  ON ha.AgeKey = d.DurationKey 
                 INNER JOIN CDW_report.dbo.BillingAccountFact bill ON ha.PatientDurableKey = bill.PatientDurableKey
@@ -100,7 +101,7 @@ SELECT
 -- Select the required fields and format them as per the new Press Ganey file format
 -- Ensure to handle NULL values and format dates correctly
 SELECT DISTINCT
-    [Survey Designator] = 'OU0101', --TODO: Update this to the correct survey designator if needed
+    [Survey Designator] = 'SP0101', --TODO: Update this to the correct survey designator if needed
     [Client ID] = loc.PressGaneyId,
     [Last Name] = pat.LastName,
     [Middle Initial] = LEFT(pat.MiddleName, 1),
@@ -115,12 +116,19 @@ SELECT DISTINCT
     [MS-DRG] = drg.Code,
     [Gender] = CASE pat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
     [Race] = pat.FirstRace,
-    [Ethnicity] = pat.Ethnicity,
+    [Ethnicity] = 
+        CASE 
+            WHEN pat.Ethnicity IS NULL OR pat.Ethnicity IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
+            WHEN pat.Ethnicity IN ('Hispanic or Latino', 'Hispanic/Latino', 'Hispanic') THEN 'Hispanic/Latino'
+            WHEN pat.Ethnicity IN ('Not Hispanic or Latino', 'Not Hispanic/Latino', 'Non-Hispanic') THEN 'Not Hispanic/Latino'
+            ELSE pat.Ethnicity
+        END,
     [Date of Birth] = CASE 
         WHEN pat.BirthDate IS NULL THEN NULL 
         ELSE FORMAT(pat.BirthDate, 'MMddyyyy') 
     END, -- Format the date to MMddyyyy
     [Language] = pat.PreferredWrittenLanguage_X,
+	PG_Test = PG_Lang_Code.PG_Code,
     [Medical Record Number] = pat.EnterpriseId,
     [Unique ID] = inpat.AccountEpicId,
     [Location Code] = dep.LocationEpicId,
@@ -154,13 +162,13 @@ SELECT DISTINCT
     [Length of Stay] = LengthOfStayInDays,
     [Room] = bed.RoomName,
     [Bed] = bed.BedName,
-    [Hospitalist] = '',
-    [Fast Track or Acute Flag] = '',
+    [Hospitalist] = NULL,
+    [Fast Track or Acute Flag] = NULL,
     [Email] = pat.EmailAddress,
-    [Hospitalist_1] = '',
-    [Hospitalist_2] = '',
+    [Hospitalist_1] = NULL,
+    [Hospitalist_2] = NULL,
     [ER_ADMIT] = CASE WHEN inpat.AdmissionSource = 'Emergency Room' THEN 'Y' ELSE 'N' END,
-	[Other Diagnosis or Procedure Code] = '', 	
+	[Other Diagnosis or Procedure Code] = NULL, 	
 	[Procedure Code 1] =  cptPat.CPT1,
 	[Procedure Code 2] =  cptPat.CPT2,
 	[Procedure Code 3] =  cptPat.CPT3,
@@ -168,10 +176,8 @@ SELECT DISTINCT
 	[Procedure Code 5] =  cptPat.CPT5,
 	[Procedure Code 6] =  cptPat.CPT6,
 	[Deceased Flag] = case when pat.DeathDate is not null then 'Y' else 'N' end,	
-    [ICD-10] = diaTerm.[Value],
     [No Publicity Flag] = 'N',
-    [State Regulation Flag] = 'N',
-    [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
+    [State Regulation Flag] = 'N',    [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
     [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.Type = 'Surgery'  THEN 'Y' ELSE 'N' END,
 	'$' EOR
 FROM PatientEncounters inpat
@@ -188,7 +194,9 @@ FROM PatientEncounters inpat
 	LEFT JOIN CDW_report.FullAccess.DepartmentDim bed WITH (NOLOCK)	ON bed.DepartmentKey = bedreq.DestinationBedKey AND bed.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON pat.DurableKey = mn.PatientDurableKey AND mn.rn = 1
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
-WHERE loc.PressGaneyId IS NOT NULL
+	LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = pat.PreferredWrittenLanguage_X
+
+WHERE loc.PressGaneyId IS NOT NULL AND	inpat.ServiceAreaEpicId = '110'
 
 
 ORDER BY [Visit or Admit Date],   [Last Name]
@@ -209,6 +217,13 @@ ORDER BY [Visit or Admit Date],   [Last Name]
 ----Select *  from  CDW_report.FullAccess.SurgicalCaseFact
 
 --Select * from CDW_Report.FullAccess.ProviderDim where PrimaryDepartmentEpicId = '11004010'
+
+---- Languages not in PG vs Epic
+--Select Distinct(PreferredWrittenLanguage_X) from CDW_Report.FullAccess.PatientDim
+--Where PreferredWrittenLanguage_X  NOT IN (Select Language from [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes])
+--order by PreferredWrittenLanguage_X
+
+
 
 
 
