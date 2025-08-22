@@ -12,7 +12,7 @@
 ------ =============================================*/
 
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/17/2025',
+        @EndDate   VARCHAR(10) = '01/07/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
@@ -124,7 +124,10 @@ SELECT DISTINCT
             WHEN pat.FirstRace IN ('Native Hawaiian or Other Pacific Islander', 'Native Hawaiian', 'Pacific Islander', 'Native Hawaiian/Pacific Islander') THEN 'Native Hawaiian or other Pacific Islander'
             WHEN pat.FirstRace IN ('White', 'Caucasian', 'White or Caucasian') THEN 'White or Caucasian'
             WHEN pat.FirstRace IN ('Other', 'Other Race') THEN 'Other'
-            WHEN pat.FirstRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race') THEN 'Two or more races'
+            -- Handle multiple race using both pat.FirstRace and pat.SecondRace
+            WHEN pat.FirstRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race')
+                 OR pat.SecondRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race')
+                 OR (pat.SecondRace IS NOT NULL AND pat.SecondRace <> '' AND pat.SecondRace <> pat.FirstRace) THEN 'Two or more races'
             ELSE pat.FirstRace
         END,
     [Ethnicity] = 
