@@ -115,7 +115,18 @@ SELECT DISTINCT
     [Mobile Number] = mn.OTHER_COMMUNIC_NUM,
     [MS-DRG] = drg.Code,
     [Gender] = CASE pat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
-    [Race] = pat.FirstRace,
+    [Race] = 
+        CASE 
+            WHEN pat.FirstRace IS NULL OR pat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
+            WHEN pat.FirstRace IN ('American Indian or Alaska Native', 'American Indian/Alaska Native', 'American Indian', 'Alaska Native') THEN 'American Indian or Alaskan Native'
+            WHEN pat.FirstRace IN ('Asian', 'Asian - Chinese', 'Asian - Indian', 'Asian - Japanese', 'Asian - Korean', 'Asian - Vietnamese', 'Asian - Filipino', 'Asian - Other') THEN 'Asian'
+            WHEN pat.FirstRace IN ('Black or African American', 'Black/African American', 'Black', 'African American') THEN 'Black or African American'
+            WHEN pat.FirstRace IN ('Native Hawaiian or Other Pacific Islander', 'Native Hawaiian', 'Pacific Islander', 'Native Hawaiian/Pacific Islander') THEN 'Native Hawaiian or other Pacific Islander'
+            WHEN pat.FirstRace IN ('White', 'Caucasian', 'White or Caucasian') THEN 'White or Caucasian'
+            WHEN pat.FirstRace IN ('Other', 'Other Race') THEN 'Other'
+            WHEN pat.FirstRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race') THEN 'Two or more races'
+            ELSE pat.FirstRace
+        END,
     [Ethnicity] = 
         CASE 
             WHEN pat.Ethnicity IS NULL OR pat.Ethnicity IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
