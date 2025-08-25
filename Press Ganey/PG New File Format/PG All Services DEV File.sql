@@ -17,7 +17,7 @@
 ------ =============================================*/
 
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/02/2025',
+        @EndDate   VARCHAR(10) = '01/07/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
@@ -173,10 +173,11 @@ SELECT DISTINCT
     END, 
     [Visit or Admit Time] = RIGHT('0000' + CAST(inpat.AdmissionTimeOfDayKey AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
     [Discharge Date] = CASE 
-        WHEN inpat.DischargeDateKey = '-1' THEN NULL -- Handle the case where DischargeDateKey is -1
-        WHEN inpat.DischargeDateKey IS NULL THEN NULL -- Handle NULL values 
+        WHEN inpat.DischargeDateKey = '-1' THEN '' -- Return blank if -1
+        WHEN inpat.DischargeDateKey IS NULL THEN '' -- Return blank if NULL
         ELSE FORMAT(CONVERT(DATE, CAST(inpat.DischargeDateKey AS CHAR(8)), 112),'MMddyyyy')
-    END, -- Format the date to MMddyyyy
+    END, -- Format the date to MMddyyyy      
+
     [Patient Discharge Status] = inpat.DischargeDispositionCode,
     [Unit] = dep.DepartmentName,
     [Service] = HospitalService,
@@ -198,7 +199,7 @@ SELECT DISTINCT
 	[Procedure Code 4] =  cptPat.CPT4,
 	[Procedure Code 5] =  cptPat.CPT5,
 	[Procedure Code 6] =  cptPat.CPT6,
-	[Deceased Flag] = case when pat.DeathDate is not null then 'Y' else 'N' end,	
+	[Deceased Flag] = CASE WHEN pat.DeathDate IS NOT NULL THEN 'Y' ELSE 'N' END,	
     [No Publicity Flag] = 'N',
     [State Regulation Flag] = 'N',
     [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,

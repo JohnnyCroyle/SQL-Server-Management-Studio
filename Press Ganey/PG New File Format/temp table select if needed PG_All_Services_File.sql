@@ -1,0 +1,75 @@
+
+
+SELECT 
+    [Survey Designator],
+    [Client ID],
+    [Last Name],
+    ISNULL([Middle Initial], '') AS [Middle Initial],
+    [First Name],
+    [Address 1],
+    [Address 2],
+    [City],
+    [State],
+    [ZIP Code],
+    [Telephone Number],
+    [Mobile Number],
+    [MS-DRG],
+    [Gender],
+    [Race],
+    [Ethnicity],
+    [Date of Birth],
+    [Language],
+    [Medical Record Number],
+    CAST([Unique ID] AS VARCHAR(100)) AS [Unique ID],
+    [Location Code],
+    [Location Name],
+    [Attending Physician NPI],
+    [Attending Physician Name],
+    [Provider Type],
+    [Provider specialty],
+    [Site address 1],
+    [Site address 2],
+    [Site city],
+    [Site state],
+    [Site zip],
+    [Patient Admission Source],
+    [Visit or Admit Date],
+    [Visit or Admit Time],
+    [Discharge Date],
+    [Patient Discharge Status],
+    [Unit],
+    [Service],
+    [Specialty],
+    [Payor / Insurance / Financial Class],
+    CAST([Length of Stay] AS VARCHAR(20)) AS [Length of Stay],
+    [Room],
+    [Bed],
+    [Hospitalist],
+    [Fast Track or Acute Flag],
+    [Email],
+    [Hospitalist_1],
+    [Hospitalist_2],
+    [ER_ADMIT],
+    [Other Diagnosis or Procedure Code],
+    [Procedure Code 1],
+    [Procedure Code 2],
+    [Procedure Code 3],
+    [Procedure Code 4],
+    [Procedure Code 5],
+    [Procedure Code 6],
+    [Deceased Flag],
+    [No Publicity Flag],
+    [State Regulation Flag],
+    [Newborn patient],
+    [Transferred/admitted to inpatient],
+    [EOR]
+FROM #PG_All_Services_File
+ORDER BY [Visit or Admit Date], [Last Name]
+OPTION (RECOMPILE);
+
+
+
+
+
+
+
