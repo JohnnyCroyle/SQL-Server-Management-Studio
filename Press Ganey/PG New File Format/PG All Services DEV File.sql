@@ -8,11 +8,16 @@
 ------
 ------ This is a test file for the new format
 ------ for Press Ganey
+------ Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
+------ Added Mobile Number to the file. 8/22/2025  
+------ Added CPT codes to the file. 8/22/2025
+
+
 
 ------ =============================================*/
 
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/07/2025',
+        @EndDate   VARCHAR(10) = '01/02/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
@@ -22,6 +27,9 @@ SELECT
 
 -- Select patient encounters for the specified date range and service area
 -- and filter by specific types of encounters
+-- This will be the driver for the data we need to pull
+-- We will use a CTE to get the patient encounters and then join with other tables as needed
+   
         ;WITH PatientEncounters AS (
 			SELECT DISTINCT
 				bill.AccountEpicId,
@@ -59,7 +67,7 @@ SELECT
 				AND ha.[Type] like ('Pharmacy Visit')
 				AND loc.ServiceAreaEpicId = '110'
                 AND d.Years > 17 -- exclude pediatric
-        ),
+        ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
                 p.DurableKey AS PatientDurableKey,
@@ -71,6 +79,7 @@ SELECT
 					AND ph.OTHER_COMMUNIC_C = 1
         ),
 		        -- Crosstab each surgery case into 6 procedure using a CTE
+                -- This will allow us to have a fixed number of columns for the CPT codes
          CPTList as (
             select PatientDurableKey, PatientKey
                 , max(case when rn = 1 then Cpt end) as CPT1
@@ -104,7 +113,7 @@ SELECT DISTINCT
     [Survey Designator] = 'SP0101', --TODO: Update this to the correct survey designator if needed
     [Client ID] = loc.PressGaneyId,
     [Last Name] = pat.LastName,
-    [Middle Initial] = LEFT(pat.MiddleName, 1),
+    [Middle Initial] =  ISNULL(LEFT(pat.MiddleName, 1), ''),
     [First Name] = pat.FirstName,
     [Address 1] = pat.AddressLine1_X,
     [Address 2] = pat.AddressLine2_X,
@@ -112,9 +121,10 @@ SELECT DISTINCT
     [State] = pat.StateOrProvinceAbbreviation,
     [ZIP Code] = pat.PostalCode,
     [Telephone Number] = pat.HomePhoneNumber,
-    [Mobile Number] = mn.OTHER_COMMUNIC_NUM,
-    [MS-DRG] = drg.Code,
-    [Gender] = CASE pat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
+    [Mobile Number] = ISNULL(mn.OTHER_COMMUNIC_NUM,'') ,
+    [MS-DRG] = ISNULL(drg.Code,''),
+    -- '1' = Male, '2' = Female, 'U' = Unknown/Other
+    [Gender] = CASE pat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'U' END,
     [Race] = 
         CASE 
             WHEN pat.FirstRace IS NULL OR pat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
@@ -142,7 +152,6 @@ SELECT DISTINCT
         ELSE FORMAT(pat.BirthDate, 'MMddyyyy') 
     END, -- Format the date to MMddyyyy
     [Language] = pat.PreferredWrittenLanguage_X,
-	PG_Test = PG_Lang_Code.PG_Code,
     [Medical Record Number] = pat.EnterpriseId,
     [Unique ID] = inpat.AccountEpicId,
     [Location Code] = dep.LocationEpicId,
@@ -152,16 +161,16 @@ SELECT DISTINCT
     [Provider Type] = prov.Type,
     [Provider specialty] = prov.PrimarySpecialty,
     [Site address 1] = dep.Address,
-    [Site address 2] = NULL,
+    [Site address 2] = '',
     [Site city] = dep.City,
     [Site state] = dep.StateOrProvinceAbbreviation,
     [Site zip] = dep.PostalCode,
     [Patient Admission Source] = inpat.AdmissionSourceCode,
     [Visit or Admit Date] = CASE 
-        WHEN inpat.AdmissionDateKey = '-1' THEN NULL -- Handle the case where AdmissionDateKey is -1
-        WHEN inpat.AdmissionDateKey IS NULL THEN NULL -- Handle NULL values 
+        WHEN inpat.AdmissionDateKey = '-1' THEN '' -- Return blank if -1
+        WHEN inpat.AdmissionDateKey IS NULL THEN '' -- Return blank if NULL
         ELSE FORMAT(CONVERT(DATE, CAST(inpat.AdmissionDateKey AS CHAR(8)), 112),'MMddyyyy')
-    END, -- Format the date to MMddyyyy
+    END, 
     [Visit or Admit Time] = RIGHT('0000' + CAST(inpat.AdmissionTimeOfDayKey AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
     [Discharge Date] = CASE 
         WHEN inpat.DischargeDateKey = '-1' THEN NULL -- Handle the case where DischargeDateKey is -1
@@ -176,13 +185,13 @@ SELECT DISTINCT
     [Length of Stay] = LengthOfStayInDays,
     [Room] = bed.RoomName,
     [Bed] = bed.BedName,
-    [Hospitalist] = NULL,
-    [Fast Track or Acute Flag] = NULL,
+    [Hospitalist] = '',
+    [Fast Track or Acute Flag] = '',
     [Email] = pat.EmailAddress,
-    [Hospitalist_1] = NULL,
-    [Hospitalist_2] = NULL,
+    [Hospitalist_1] = '',
+    [Hospitalist_2] = '',
     [ER_ADMIT] = CASE WHEN inpat.AdmissionSource = 'Emergency Room' THEN 'Y' ELSE 'N' END,
-	[Other Diagnosis or Procedure Code] = NULL, 	
+	[Other Diagnosis or Procedure Code] = '', 	
 	[Procedure Code 1] =  cptPat.CPT1,
 	[Procedure Code 2] =  cptPat.CPT2,
 	[Procedure Code 3] =  cptPat.CPT3,
@@ -191,9 +200,10 @@ SELECT DISTINCT
 	[Procedure Code 6] =  cptPat.CPT6,
 	[Deceased Flag] = case when pat.DeathDate is not null then 'Y' else 'N' end,	
     [No Publicity Flag] = 'N',
-    [State Regulation Flag] = 'N',    [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
+    [State Regulation Flag] = 'N',
+    [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
     [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.Type = 'Surgery'  THEN 'Y' ELSE 'N' END,
-	'$' EOR
+    '$' EOR
 FROM PatientEncounters inpat
 	INNER JOIN CDW_Report.FullAccess.PatientDim pat WITH (NOLOCK) ON inpat.PatientDurableKey = pat.DurableKey AND inpat.PatientKey = pat.PatientKey
 	INNER JOIN CDW_report.FullAccess.ProviderDim prov WITH (NOLOCK) ON inpat.ProviderDurableKey = prov.DurableKey AND inpat.ProviderKey = prov.ProviderKey
@@ -236,6 +246,9 @@ ORDER BY [Visit or Admit Date],   [Last Name]
 --Select Distinct(PreferredWrittenLanguage_X) from CDW_Report.FullAccess.PatientDim
 --Where PreferredWrittenLanguage_X  NOT IN (Select Language from [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes])
 --order by PreferredWrittenLanguage_X
+
+
+--Select DISTINCT SurveyDesignator  from [ETLProcedureRepository].[dbo].[PressGaneySurveyMap] order by SurveyDesignator
 
 
 
