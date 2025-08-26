@@ -11,6 +11,7 @@
 ------ Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
 ------ Added Mobile Number to the file. 8/22/2025  
 ------ Added CPT codes to the file. 8/22/2025
+------ Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
 
 
 
@@ -177,7 +178,7 @@ SELECT DISTINCT
         WHEN inpat.BirthDate IS NULL THEN NULL 
         ELSE FORMAT(inpat.BirthDate, 'MMddyyyy') 
     END, -- Format the date to MMddyyyy
-    [Language] = inpat.PreferredWrittenLanguage_X,
+    [Language] = ISNULL(PG_Lang_Code.PG_Code,'99'),
     [Medical Record Number] = inpat.EnterpriseId,
     [Unique ID] = inpat.EncounterKey,
     [Location Code] = dep.LocationEpicId,
