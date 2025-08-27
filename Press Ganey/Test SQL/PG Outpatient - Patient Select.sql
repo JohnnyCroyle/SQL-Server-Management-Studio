@@ -13,6 +13,15 @@ SELECT
 -- and filter by specific types of encounters
 
 			SELECT DISTINCT
+				en.type,
+                en.PatientDurableKey, 
+                en.PatientKey,
+				en.DateKey, --This date is of the start of the encounter, visit
+				bill.AdmissionTimeOfDayKey,
+				en.ProviderKey,
+				en.ProviderDurableKey,
+				--en.PrimaryDiagnosisKey,
+				--bill.PrimaryCoverageKey,				
 				pat.LastName,
 				pat.MiddleName,
 				pat.FirstName,
@@ -33,54 +42,52 @@ SELECT
 				pat.DeathDate,
 				pat.EmailAddress,
 				--bill.AccountEpicId, --Using Ecounter Key as Unique Visit Number instead
-				en.type,
-                en.PatientDurableKey, 
-                en.PatientKey, 
-                en.DepartmentKey,
-                en.EncounterKey,
-                AdmissionInstant,
-                DischargeInstant,
+				dep.LocationEpicId,
+				dep.LocationName,
+				prov.Npi,
+				prov.Name,
+				prov.Type,
+				prov.PrimarySpecialty,
+				dep.Address,
+				dep.City,
+				dep.StateOrProvinceAbbreviation,
+				dep.PostalCode,
+				dep.DepartmentName,
+				dep.DepartmentSpecialty,
+                --en.DepartmentKey,
+                --en.EncounterKey,
                 en.AdmissionSource,
                 DischargeDisposition,
                 PatientClass,
-				bill.DiagnosisComboKey,
-				AdmissionTimeOfDayKey,
-				DischargeTimeOfDayKey,
-				NULL as AdmissionTimeOfDayKey, --Not required for Press Ganey
-                NULL as DischargeTimeOfDayKey, --Not required for Press Ganey 
-				en.DateKey, --This date is of the start of the encounter, visit
-				en.AdmittingProviderDurableKey,
+				--bill.DiagnosisComboKey,
+				--en.AdmittingProviderDurableKey,
+				--bill.AttendingProviderDurableKey,
 				DischargeProviderDurableKey,
-				en.PrimaryDiagnosisKey,
-				bill.PrimaryCoverageKey,
 				AdmissionSourceCode,
 				DischargeDispositionCode,
-				bill.AttendingProviderDurableKey,
-				loc.ServiceAreaEpicId,
-				meds.PrescribingProviderKey as  ProviderKey, -- Using PrescribingProviderKey to link to ProviderDim for Pharmacy Visits
-				meds.PrescribingProviderDurableKey as  ProviderDurableKey -- Using PrescribingProviderDurableKey to link to ProviderDim for Pharmacy Visits
+				loc.ServiceAreaEpicId
+
             FROM CDW_report.FullAccess.EncounterFact en 
 				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
-
-				INNER JOIN CDW_report.FullAccess.MedicationEventFact meds ON meds.EncounterKey = en.EncounterKey
+				INNER JOIN CDW_report.FullAccess.ProviderDim prov WITH (NOLOCK) ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep WITH (NOLOCK) ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.LocationEpicId NOT IN ('11016', '11017')
                 INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
-                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey
+                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
                	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
-
 
             WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
             --WHERE StartDateKey BETWEEN @StartDateInt AND @EndDateInt
 				--AND en.[Type] IN ('Occupational Therapy','Physical Therapy','Hospital Encounter','Speech Therapy','Office Visit')
-				AND en.[Type] like ('Pharmacy Visit')
+				AND en.[Type] IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Office Visit') --FOR ALL OUTPATIENT THERAPY
 				AND loc.ServiceAreaEpicId = '110'
                 AND d.Years > 17 -- exclude pediatric
-				AND meds.Mode =  'Outpatient'
-
-				--AND meds.AdministrationAction NOT IN  ('*Unspecified','*Deleted')
 
 
 
---Select * from CDW_report.dbo.BillingAccountFact
+				--Select DISTINCT (Type) from CDW_report.FullAccess.EncounterFact
+
+
+				--Select * from CDW_report.dbo.BillingAccountFact
 
 
 

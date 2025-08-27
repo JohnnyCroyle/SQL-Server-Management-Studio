@@ -53,27 +53,27 @@ SELECT
 				pat.DeathDate,
 				pat.EmailAddress,
 				--bill.AccountEpicId, --Using Ecounter Key as Unique Visit Number instead
-				ha.type,
-                ha.PatientDurableKey, 
-                ha.PatientKey, 
-                ha.DepartmentKey,
-                ha.EncounterKey,
-                AdmissionInstant,
-                DischargeInstant,
-                ha.AdmissionSource,
+				en.type,
+                en.PatientDurableKey, 
+                en.PatientKey, 
+                en.DepartmentKey,
+                en.EncounterKey,
+                --AdmissionInstant,
+                --DischargeInstant,
+                --en.AdmissionSource,
                 DischargeDisposition,
                 PatientClass,
 				bill.DiagnosisComboKey,
 				NULL as AdmissionTimeOfDayKey, --Not required for Press Ganey
                 NULL as DischargeTimeOfDayKey, --Not required for Press Ganey 
 				--bill.AdmissionDateKey,
-				ha.DateKey as AdmissionDateKey, --This date is of the start of the encounter. Will use for Visits
+				en.DateKey as AdmissionDateKey, --This date is of the start of the encounter. Will use for Visits
                 --NOTE to self: This is the date of the encounter, not the admission date. 
                 --Probably should be used for Visits and not Admissions
-				ha.DischargeDateKey,
-				ha.AdmittingProviderDurableKey,
+				en.DischargeDateKey,
+				en.AdmittingProviderDurableKey,
 				DischargeProviderDurableKey,
-				ha.PrimaryDiagnosisKey,
+				en.PrimaryDiagnosisKey,
 				bill.PrimaryCoverageKey,
 				AdmissionSourceCode,
 				DischargeDispositionCode,
@@ -81,16 +81,16 @@ SELECT
 				loc.ServiceAreaEpicId,
 				meds.PrescribingProviderKey as  ProviderKey, -- Using PrescribingProviderKey to link to ProviderDim for Pharmacy Visits
 				meds.PrescribingProviderDurableKey as  ProviderDurableKey -- Using PrescribingProviderDurableKey to link to ProviderDim for Pharmacy Visits
-            FROM CDW_report.FullAccess.EncounterFact ha 
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON ha.PatientDurableKey = pat.DurableKey AND ha.PatientKey = pat.PatientKey
-				INNER JOIN CDW_report.FullAccess.MedicationEventFact meds ON meds.EncounterKey = ha.EncounterKey
-                INNER JOIN CDW_report.dbo.DurationDim d  ON ha.AgeKey = d.DurationKey 
-                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON ha.PatientDurableKey = bill.PatientDurableKey
-               	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON ha.DepartmentKey = loc.DepartmentKey
-            WHERE ha.DateKey BETWEEN @StartDateInt AND @EndDateInt
+            FROM CDW_report.FullAccess.EncounterFact en 
+				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
+				INNER JOIN CDW_report.FullAccess.MedicationEventFact meds ON meds.EncounterKey = en.EncounterKey
+                INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
+                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey
+               	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
+            WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
             --WHERE StartDateKey BETWEEN @StartDateInt AND @EndDateInt
-				--AND ha.[Type] IN ('Occupational Therapy','Physical Therapy','Hospital Encounter','Speech Therapy','Office Visit')
-				AND ha.[Type] like ('Pharmacy Visit')
+				--AND en.[Type] IN ('Occupational Therapy','Physical Therapy','Hospital Encounter','Speech Therapy','Office Visit')
+				AND en.[Type] = ('Pharmacy Visit')
 				AND loc.ServiceAreaEpicId = '110'
                 AND d.Years > 17 -- exclude pediatric
 				AND meds.Mode =  'Outpatient'

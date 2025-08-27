@@ -64,7 +64,7 @@ SELECT
 
 				INNER JOIN CDW_report.FullAccess.MedicationEventFact meds ON meds.EncounterKey = en.EncounterKey
                 INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
-                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey
+                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey 
                	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
 
 
@@ -74,7 +74,7 @@ SELECT
 				AND en.[Type] like ('Pharmacy Visit')
 				AND loc.ServiceAreaEpicId = '110'
                 AND d.Years > 17 -- exclude pediatric
-				AND meds.Mode =  'Outpatient'
+				--AND meds.Mode =  'Outpatient'
 
 				--AND meds.AdministrationAction NOT IN  ('*Unspecified','*Deleted')
 
