@@ -5,12 +5,18 @@ VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{4F2E2C19-372F-40D8-9FA7-9D2138C6997A}") = "PG New File Format", "PG New File Format.ssmssqlproj", "{ADF712D1-4946-4B4A-9871-31B3FDE1B8AC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7DCE0F81-7A5A-4722-A1B7-8389B211DF0D}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Default|Default = Default|Default
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{ADF712D1-4946-4B4A-9871-31B3FDE1B8AC}.Default|Default.ActiveCfg = Default
+		{3DDD70F9-6648-4B13-A7A2-36CC5D48B085}.Default|Default.ActiveCfg = Default
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

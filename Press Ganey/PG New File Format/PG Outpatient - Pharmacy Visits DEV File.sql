@@ -60,7 +60,7 @@ SELECT
                 en.EncounterKey,
                 --AdmissionInstant,
                 --DischargeInstant,
-                --en.AdmissionSource,
+                en.AdmissionSource,
                 DischargeDisposition,
                 PatientClass,
 				bill.DiagnosisComboKey,
