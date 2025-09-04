@@ -37,17 +37,23 @@
           <AssociatedConnUserName />
           <FullPath>DROP TABLE TO CREATE [dbo].[PressGaneySurveyMap] AND INSERT DATA.sql</FullPath>
         </FileNode>
-        <FileNode Name="PG Outpatient - Patient Select.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
-          <AssociatedConnUserName />
-          <FullPath>PG Outpatient - Patient Select.sql</FullPath>
-        </FileNode>
-        <FileNode Name="PG Outpatient - Pharmacy Visits DEV File.sql">
+        <FileNode Name="FULL - PG Pharmacy Survey File.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>PG Outpatient - Pharmacy Visits DEV File.sql</FullPath>
+          <FullPath>FULL - PG Pharmacy Survey File.sql</FullPath>
+        </FileNode>
+        <FileNode Name="PG Outpatient - Patient Select.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>PG Outpatient - Patient Select.sql</FullPath>
+        </FileNode>
+        <FileNode Name="PG Pharmacy - Patient Select.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>PG Pharmacy - Patient Select.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>
