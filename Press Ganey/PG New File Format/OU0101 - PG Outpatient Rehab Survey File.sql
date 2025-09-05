@@ -79,9 +79,9 @@ SELECT
 				dep.City as ProviderCity,
 				dep.StateOrProvinceAbbreviation as ProviderState,
 				dep.PostalCode as ProviderZipcode,
+				dep.DepartmentKey,
+                dep.DepartmentEpicId,
 				dep.DepartmentName,
-				--dep.DepartmentSpecialty,
-                en.DepartmentKey,
                 en.EncounterKey,
                 en.AdmissionSource,
                 DischargeDisposition,
@@ -97,10 +97,11 @@ SELECT
 				AdmissionSourceCode,
 				DischargeDispositionCode,
 				loc.ServiceAreaEpicId
+
             FROM CDW_report.FullAccess.EncounterFact en 
 				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
 				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.LocationEpicId NOT IN ('11016', '11017')
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 
                 INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
                 INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
                	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
@@ -199,6 +200,8 @@ SELECT DISTINCT
     [Unique ID] = inpat.EncounterKey,
     [Location Code] = inpat.LocationEpicId,
     [Location Name] = inpat.LocationName,
+    [Department Code] = inpat.DepartmentEpicId,
+    [Department Name] = inpat.DepartmentName,
     [Attending Physician NPI] = inpat.Npi,
     [Attending Physician Name] = inpat.ProviderName,
     [Provider Type] = inpat.ProviderType,
@@ -250,8 +253,6 @@ SELECT DISTINCT
     [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.ProviderType = 'Surgery'  THEN 'Y' ELSE 'N' END,
     '$' EOR
 FROM PatientEncounters inpat 
-	--INNER JOIN CDW_report.FullAccess.ProviderDim prov WITH (NOLOCK) ON inpat.ProviderDurableKey = prov.DurableKey AND inpat.ProviderKey = prov.ProviderKey
-	--INNER JOIN CDW_Report.FullAccess.DepartmentDim dep WITH (NOLOCK) ON inpat.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 --AND dep.LocationEpicId NOT IN ('11016', '11017')
 	LEFT JOIN CDW_report.FullAccess.DrgDim drg ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
 	LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia  ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
 	LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
@@ -265,8 +266,13 @@ FROM PatientEncounters inpat
 
 WHERE loc.PressGaneyId IS NOT NULL AND	inpat.ServiceAreaEpicId = '110'
 
+--and PressGaneyId = 9
+
 
 ORDER BY [Visit or Admit Date],   [Last Name]
+
+
+--Select * from [EDW_Epic_DMart].[dbo].[DepartmentDimExt] 
 
 
 
@@ -295,6 +301,6 @@ ORDER BY [Visit or Admit Date],   [Last Name]
 
 
 
---Select * from [EDW_Epic_DMart].[dbo].[DepartmentDimExt]
+--Select * from [EDW_Epic_DMart].[dbo].[DepartmentDimExt] where DepartmentKey = 110
 
 
