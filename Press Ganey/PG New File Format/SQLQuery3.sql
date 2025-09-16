@@ -1,34 +1,16 @@
-/*-- =============================================
------- Author:		Johnny Croyle
------- Create date: 08/13/2025
------- Description:	get dataset for Press Ganey's New File Format for Survey's
------- This pull will be Encounter based
------- and will include all services
------- for MaineHealth
-------
------- This is a test file for the new format
------- for Press Ganey
------- Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
------- Added Mobile Number to the file. 8/22/2025  
------- Added CPT codes to the file. 8/22/2025
------- Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
-
-
-
------- =============================================*/
-
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/07/2025',
+        @EndDate   VARCHAR(10) = '01/02/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
+
 SELECT 
-	@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
-    @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
+	--@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
+ --   @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
 
 
-	--@StartDateInt =  20250821,
-	--@EndDateInt = 20250821;
+	@StartDateInt =  20250821,
+	@EndDateInt = 20250821;
 
 -- Select patient encounters for the specified date range and service area
 -- and filter by specific types of encounters
@@ -42,11 +24,11 @@ SELECT
                 en.PatientDurableKey, 
                 en.PatientKey,
 				en.DateKey, --This date is of the start of the encounter, visit
+				--bill.AdmissionTimeOfDayKey,
 				en.ProviderKey,
 				en.ProviderDurableKey,
 				en.PrimaryDiagnosisKey,
-				pat.PatientEpicId,
-				pat.DurableKey,
+				--bill.PrimaryCoverageKey,				
 				pat.LastName,
 				pat.MiddleName,
 				pat.FirstName,
@@ -66,7 +48,7 @@ SELECT
 				pat.EnterpriseId,
 				pat.DeathDate,
 				pat.EmailAddress,
-				pat.AgeInYears,
+				--bill.AccountEpicId, --Using Ecounter Key as Unique Visit Number instead
 				dep.LocationEpicId,
 				dep.LocationName,
 				prov.Npi,
@@ -80,9 +62,6 @@ SELECT
 				dep.DepartmentKey,
                 dep.DepartmentEpicId,
 				dep.DepartmentName,
-				dep.IsBed,
-				dep.RoomName,
-				dep.BedName,
                 en.EncounterKey,
                 en.AdmissionSource,
                 DischargeDisposition,
@@ -97,27 +76,31 @@ SELECT
 				DischargeProviderDurableKey,
 				AdmissionSourceCode,
 				DischargeDispositionCode,
-				ServiceAreaEpicId
+				loc.ServiceAreaEpicId
+
             FROM CDW_report.FullAccess.EncounterFact en 
 				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
 				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 
+                INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
                 LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
+               	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
             WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
+
 				AND en.[Type] IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Hospital Encounter',
 				'Office Visit', 'Clinical Support',' Behavioral Health', 'Nurse Triage', 'Results Follow-Up', 'Telemedicine, IMAT')
+
 				AND dep.DepartmentSpecialty IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Sports Medicine','Rehabilitation','Orthopedic')
-				AND DerivedEncounterStatus <> 'Invalid'
         ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
                 p.DurableKey AS PatientDurableKey,
                 ph.OTHER_COMMUNIC_NUM,
                 ROW_NUMBER() OVER (PARTITION BY p.DurableKey ORDER BY ph.CONTACT_PRIORITY) AS rn
-            FROM PatientEncounters p
+            FROM CDW_report.FullAccess.PatientDim p
 				INNER JOIN CLARITY.dbo.OTHER_COMMUNCTN ph WITH (NOLOCK)
 					ON p.PatientEpicId = ph.PAT_ID
-					AND ph.OTHER_COMMUNIC_C = 1  AND ph.CONTACT_PRIORITY = 1
+					AND ph.OTHER_COMMUNIC_C = 1
         ),
 		        -- Crosstab each surgery case into 6 procedure using a CTE
                 -- This will allow us to have a fixed number of columns for the CPT codes
@@ -166,7 +149,7 @@ SELECT DISTINCT
     [Mobile Number] = ISNULL(mn.OTHER_COMMUNIC_NUM,'') ,
     [MS-DRG] = ISNULL(drg.Code,''),
     -- '1' = Male, '2' = Female, 'U' = Unknown/Other
-    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
+    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'U' END,
     [Race] = 
         CASE 
             WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
@@ -230,8 +213,8 @@ SELECT DISTINCT
     [Payor / Insurance / Financial Class] = '',-- cov.PayorName, -- Not required for Press Ganey
     --[Payor / Insurance / Financial Class] = cov.PayorName, 
     [Length of Stay] = LengthOfStayInDays,
-    [Room] = inpat.RoomName,
-    [Bed] = inpat.BedName,
+    [Room] = bed.RoomName,
+    [Bed] = bed.BedName,
     [Hospitalist] = '',
     [Fast Track or Acute Flag] = '',
     [Email] = inpat.EmailAddress,
@@ -257,12 +240,13 @@ FROM PatientEncounters inpat
 	LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
 	LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc ON inpat.DepartmentKey = loc.DepartmentKey
 	LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
-	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
+	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey
+	LEFT JOIN CDW_report.FullAccess.DepartmentDim bed ON bed.DepartmentKey = bedreq.DestinationBedKey AND bed.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON inpat.PatientDurableKey = mn.PatientDurableKey AND mn.rn = 1
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
 	--LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
-WHERE loc.PressGaneyId IS NOT NULL 
+WHERE loc.PressGaneyId IS NOT NULL AND	inpat.ServiceAreaEpicId = '110'
 
 
 

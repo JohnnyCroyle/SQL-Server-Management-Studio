@@ -3,6 +3,18 @@
   <Items>
     <LogicalFolder Name="Connections" Type="2" Sorted="true">
       <Items>
+        <ConnectionNode Name="COGITORPTP2:MEHEALTH\1jcroyle">
+          <Created>2025-09-09T15:51:22.6144107-04:00</Created>
+          <Type>SQL</Type>
+          <Server>COGITORPTP2</Server>
+          <UserName />
+          <Authentication>Windows Authentication</Authentication>
+          <InitialDB>master</InitialDB>
+          <LoginTimeout>30</LoginTimeout>
+          <ExecutionTimeout>0</ExecutionTimeout>
+          <ConnectionProtocol>NotSpecified</ConnectionProtocol>
+          <ApplicationName>Microsoft SQL Server Management Studio - Query</ApplicationName>
+        </ConnectionNode>
         <ConnectionNode Name="COGITORPTUAT:MEHEALTH\1jcroyle">
           <Created>2025-08-25T11:15:08.1623273-04:00</Created>
           <Type>SQL</Type>
@@ -37,12 +49,6 @@
           <AssociatedConnUserName />
           <FullPath>DROP TABLE TO CREATE [dbo].[PressGaneySurveyMap] AND INSERT DATA.sql</FullPath>
         </FileNode>
-        <FileNode Name="PRD Rehab TEST select.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
-          <AssociatedConnUserName />
-          <FullPath>PRD Rehab TEST select.sql</FullPath>
-        </FileNode>
         <FileNode Name="Rehab - Patient Select.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
@@ -50,10 +56,16 @@
           <FullPath>Rehab - Patient Select.sql</FullPath>
         </FileNode>
         <FileNode Name="SP0101 - PG Pharmacy Survey File.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTP2:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTP2</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>SP0101 - PG Pharmacy Survey File.sql</FullPath>
+        </FileNode>
+        <FileNode Name="testing rehab after trang.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTP2:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTP2</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>testing rehab after trang.sql</FullPath>
         </FileNode>
         <FileNode Name="Urgent Care - Patient Select.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
@@ -68,8 +80,8 @@
           <FullPath>Pharmacy - Patient Select.sql</FullPath>
         </FileNode>
         <FileNode Name="PRD Pharm TEST select.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTP2:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTP2</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>PRD Pharm TEST select.sql</FullPath>
         </FileNode>

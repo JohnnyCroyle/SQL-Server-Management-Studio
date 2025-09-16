@@ -1,0 +1,201 @@
+USE [AetnaClaims_DEV]
+GO
+/****** Object:  StoredProcedure [dbo].[sp_PopulateMedClaimsFactTable]    Script Date: 9/10/2025 9:42:10 AM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+/*-- =============================================
+------ Author:		Johnny Croyle
+------ Create date: 9/10/2025
+------ Description:	This SP will transform and load staging data into fact table
+
+------ =============================================*/
+
+
+ALTER PROCEDURE [dbo].[sp_PopulateMedClaimsFactTable] @filename varchar(255)
+
+
+AS
+
+DECLARE @dbName varchar(100) = 'dbName: ' +  DB_Name()
+
+
+
+BEGIN TRY
+	SET NOCOUNT ON;
+
+INSERT INTO [AetnaClaims_DEV].[fact].[MemberClaims]
+SELECT 
+	CAST(TRIM(member_id) AS varchar(255)),
+	CAST(TRIM(ps_unique_id) AS varchar(255)),
+	CAST(TRIM(customer_nbr) AS varchar(255)),
+	CAST(TRIM(group_nbr) AS varchar(255)),
+	CAST(TRIM(idn_indicator) AS varchar(255)) idn_ind,
+	CAST(TRIM(subgroup_nbr) AS varchar(255)),
+	CAST(TRIM(account_nbr) AS varchar(255)),
+	CAST(TRIM(file_id) AS varchar(255)),
+	CAST(TRIM(emp_first_nm) AS varchar(255)),
+	CAST(TRIM(emp_last_nm) AS varchar(255)),
+	CAST(TRIM(emp_gender) AS varchar(255)),
+	CONVERT(varchar(10), subscriber_brth_dt, 23) subscriber_brth_dt,
+	CAST(TRIM(subs_st_postal_cd) AS varchar(255)),
+	CAST(TRIM(subs_zip_cd) AS varchar(255)),
+	CAST(TRIM(mem_first_nm) AS varchar(255)),
+	CAST(TRIM(mem_last_nm) AS varchar(255)),
+	CAST(TRIM(mem_gender) AS varchar(255)),
+	CAST(TRIM(clm_ln_type_cd) AS varchar(255)),
+	CAST(TRIM(non_prfrrd_srv_cd) AS varchar(255)),
+	CAST(TRIM(plsp_prod_cd) AS varchar(255)),
+	CAST(TRIM(product_ln_cd) AS varchar(255)),
+	CAST(TRIM(classification_cd) AS varchar(255)),
+	CAST(TRIM(bnft_pkg_id) AS varchar(255)),
+	CAST(TRIM(plan_id) AS varchar(255)),
+	CAST(TRIM(non_prfrrd_srv_cd_BEN_TIER) AS varchar(255)),
+	CAST(TRIM(fund_ctg_cd) AS varchar(255)),
+	CAST(TRIM(src_clm_id) AS varchar(255)),
+	CAST(TRIM(src_claim_line_id) AS varchar(255)),
+	CAST(TRIM(src_subscriber_id) AS varchar(255)),
+	CAST(TRIM(srv_prvdr_id) AS varchar(255)),
+	CAST(TRIM(srv_prvdr_npi) AS varchar(255)),
+	CAST(TRIM(print_nm_SERVICE) AS varchar(255)),
+	CAST(TRIM(address_line_1_txt) AS varchar(255)),
+	CAST(TRIM(address_line_2_txt) AS varchar(255)),
+	CAST(TRIM(city_nm) AS varchar(255)),
+	CAST(TRIM(zip_cd) AS varchar(255)),
+	CAST(TRIM(state_postal_cd) AS varchar(255)),
+	CAST(TRIM(provider_type_cd) AS varchar(255)),
+	CAST(TRIM(specialty_cd) AS varchar(255)),
+	CAST(TRIM(prev_clm_seg_id) AS varchar(255)),
+	CAST(TRIM(derived_tcn_nbr) AS varchar(255)),
+	CAST(TRIM(src_claim_line_id_PAY) AS varchar(255)),
+	CAST(claim_line_id as numeric) claim_line_id,
+	CAST(TRIM(ntwk_srv_area_id) AS varchar(255)),
+	CAST(TRIM(paid_prvdr_nsa_id) AS varchar(255)),
+	CAST(TRIM(srv_capacity_cd) AS varchar(255)),
+	CAST(TRIM(tax_id_format_cd_PCP) AS varchar(255)),
+	CAST(TRIM(tax_id_nbr_PCP) AS varchar(255)),
+	CAST(TRIM(print_nm_PCP) AS varchar(255)),
+	CAST(TRIM(tax_id_format_cd_SERVICE) AS varchar(255)),
+	CAST(TRIM(tax_id_nbr_SERVICE) AS varchar(255)),
+	CAST(TRIM(payee_cd) AS varchar(255)),
+	CAST(TRIM(paid_prvdr_par_cd) AS varchar(255)),
+	CONVERT(varchar(10), received_dt, 23) received_dt,
+	CONVERT(varchar(10), adjn_dt, 23) adjn_dt,
+	CONVERT(varchar(10), srv_start_dt, 23) srv_start_dt,
+	CONVERT(varchar(10), srv_stop_dt, 23) srv_stop_dt,
+	CONVERT(varchar(10), paid_dt, 23) paid_dt,
+	CAST(TRIM(mdc_cd) AS varchar(255)),
+	CAST(TRIM(drg_cd) AS varchar(255)),
+	CAST(TRIM(prcdr_cd) AS varchar(255)),
+	CAST(TRIM(prcdr_modifier_cd_1) AS varchar(255)),
+	CAST(TRIM(prcdr_type_cd_2) AS varchar(255)),
+	CAST(TRIM(ICD10_indicator) AS varchar(255)) ICD10_ind,
+	CAST(TRIM(MED_COST_SUBCTG_CD) AS varchar(255)),
+	CAST(TRIM(prcdr_group_nbr) AS varchar(255)),
+	CAST(TRIM(type_srv_cd) AS varchar(255)),
+	CAST(TRIM(srv_benefit_cd) AS varchar(255)),
+	CAST(TRIM(tooth_1_nbr) AS varchar(255)),
+	CAST(TRIM(plc_srv_cd) AS varchar(255)),
+	CAST(TRIM(dschrg_status_cd) AS varchar(255)),
+	CAST(TRIM(revenue_cd) AS varchar(255)),
+	CAST(TRIM(hcfa_bill_type_cd) AS varchar(255)),
+	CAST(unit_cnt as numeric) /100 unit_cnt,
+	CAST(src_unit_cnt as numeric) /100 src_unit_cnt,
+	CAST(src_billed_amt as numeric) /100 src_billed_amt,
+	CAST(billed_amt as numeric) /100 billed_amt,
+	CAST(not_covered_amt_1 as numeric) /100 not_covered_amt_1,
+	CAST(not_covered_amt_2 as numeric) /100 not_covered_amt_2,
+	CAST(not_covered_amt_3 as numeric) /100 not_covered_amt_3,
+	CAST(TRIM(clm_ln_msg_cd_1) AS varchar(255)),
+	CAST(TRIM(clm_ln_msg_cd_2) AS varchar(255)),
+	CAST(TRIM(clm_ln_msg_cd_3) AS varchar(255)),
+	CAST(covered_amt as numeric) /100 covered_amt,
+	CAST(allowed_amt as numeric) /100 allowed_amt,
+	CAST(TRIM(column93) AS varchar(255)),
+	CAST(srv_copay_amt as numeric) /100 srv_copay_amt,
+	CAST(src_srv_copay_amt as numeric) /100 src_srv_copay_amt,
+	CAST(deductible_amt as numeric) /100 deductible_amt,
+	CAST(coinsurance_amt as numeric) /100 coinsurance_amt,
+	CAST(src_coins_amt as numeric) /100 src_coins_amt,
+	CAST(bnft_payable_amt as numeric) /100 bnft_payable_amt,
+	CAST(paid_amt as numeric) /100 paid_amt,
+	CAST(cob_paid_amt as numeric) /100 cob_paid_amt,
+	CAST(ahf_bfd_amt as numeric) /100 ahf_bfd_amt,
+	CAST(ahf_paid_amt as numeric) /100 ahf_paid_amt,
+	CAST(negot_savings_amt as numeric) /100 negot_savings_amt,
+	CAST(r_c_savings_amt as numeric) /100 r_c_savings_amt,
+	CAST(cob_savings_amt as numeric) /100 cob_savings_amt,
+	CAST(src_cob_svngs_amt as numeric) /100 src_cob_svngs_amt,
+	CAST(TRIM(pri_payer_cvg_cd) AS varchar(255)),
+	CAST(TRIM(cob_type_cd) AS varchar(255)),
+	CAST(TRIM(cob_cd) AS varchar(255)),
+	CAST(TRIM(prcdr_cd_ndc) AS varchar(255)),
+	CAST(TRIM(member_cumbID) AS varchar(255)),
+	CAST(TRIM(clm_ln_status_cd) AS varchar(255)),
+	CAST(TRIM(src_member_id) AS varchar(255)),
+	CAST(TRIM(reversal_cd) AS varchar(255)),
+	CAST(TRIM(admit_cnt) AS varchar(255)),
+	CAST(admin_savings_amt as numeric) /100 admin_savings_amt,
+	CAST(TRIM(adj_prvdr_dsgnn_cd) AS varchar(255)),
+	CAST(TRIM(aex_plan_dsgntn_cd) AS varchar(255)),
+	CAST(TRIM(benefit_tier_cd) AS varchar(255)),
+	CAST(TRIM(aex_prvdr_spctg_cd) AS varchar(255)),
+	CAST(TRIM(prod_distnctn_cd) AS varchar(255)),
+	CAST(billed_eligible_amt as numeric) /100 billed_eligible_amt,
+	CAST(TRIM(SPCLTY_CTG_CLS_CD) AS varchar(255)),
+	CAST(TRIM(column128) AS varchar(255)),
+	CAST(TRIM(column129) AS varchar(255)),
+	CAST(TRIM(column130) AS varchar(255)),
+	CAST(TRIM(pricing_mthd_cd) AS varchar(255)),
+	CAST(TRIM(type_class_cd) AS varchar(255)),
+	CAST(TRIM(specialty_ctg_cd) AS varchar(255)),
+	CAST(TRIM(ttl_ded_met_ind) AS varchar(255)),
+	CAST(ttl_interest_amt as numeric) /100 ttl_interest_amt,
+	CAST(ttl_surcharge_amt as numeric) /100 ttl_surcharge_amt,
+	CAST(TRIM(SRV_SPCLTY_CTG_CD) AS varchar(255)),
+	CAST(TRIM(HCFA_PLC_SRV_CD) AS varchar(255)),
+	CAST(TRIM(HCFA_ADMIT_SRC_CD) AS varchar(255)),
+	CAST(TRIM(HCFA_ADMIT_TYPE_CD) AS varchar(255)),
+	CONVERT(varchar(10), SRC_ADMIT_DT, 23) SRC_ADMIT_DT,
+	CONVERT(varchar(10), SRC_DISCHARGE_DT, 23) SRC_DISCHARGE_DT,
+	CAST(TRIM(prcdr_modifier_cd_2) AS varchar(255)),
+	CAST(TRIM(prcdr_modifier_cd_3) AS varchar(255)),
+	CAST(TRIM(ahf_det_order_cd) AS varchar(255)),
+	CAST(ahf_mbr_coins_amt as numeric) /100 ahf_mbr_coins_amt,
+	CAST(ahf_mbr_copay_amt as numeric) /100 ahf_mbr_copay_amt,
+	CAST(ahf_mbr_ded_amt as numeric) /100 ahf_mbr_ded_amt,
+	CAST(TRIM(sensitivity_ind) AS varchar(255)),
+	CAST(TRIM(admit_type_cd) AS varchar(255)),
+	CAST(TRIM(ORG_CD) AS varchar(255)),
+	CAST('AETNA' AS varchar(255)) carrier_ind,
+	@filename LoadFile,
+	GETDATE() Created_Date,
+	'sp_PopulateMedClaimsFactTable' CreatedBy,
+	GETDATE() Updated_Date,
+	'sp_PopulateMedClaimsFactTable' Updated_By
+FROM AetnaClaims_DEV.staging.MemberClaims as s
+WHERE NOT EXISTS (
+	SELECT 1 
+	FROM [AetnaClaims_DEV].[fact].[MemberClaims] as f
+	WHERE f.member_id = s.member_id
+	  AND f.claim_line_id = s.claim_line_id
+)
+
+
+
+--Delete records from staging table NOT Sure if we need to remove from staging after
+--TRUNCATE TABLE AetnaClaims_DEV.staging.MemberClaims
+
+
+
+END TRY
+BEGIN CATCH
+	EXEC ETLlog.dbo.sp_logErrorInfo @dbName;
+	THROW
+END CATCH
+
+
+

@@ -1,34 +1,16 @@
-/*-- =============================================
------- Author:		Johnny Croyle
------- Create date: 08/13/2025
------- Description:	get dataset for Press Ganey's New File Format for Survey's
------- This pull will be Encounter based
------- and will include all services
------- for MaineHealth
-------
------- This is a test file for the new format
------- for Press Ganey
------- Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
------- Added Mobile Number to the file. 8/22/2025  
------- Added CPT codes to the file. 8/22/2025
------- Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
-
-
-
------- =============================================*/
-
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/07/2025',
+        @EndDate   VARCHAR(10) = '01/02/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
+
 SELECT 
-	@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
-    @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
+	--@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
+ --   @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
 
 
-	--@StartDateInt =  20250821,
-	--@EndDateInt = 20250821;
+	@StartDateInt =  20250821,
+	@EndDateInt = 20250821;
 
 -- Select patient encounters for the specified date range and service area
 -- and filter by specific types of encounters
@@ -37,14 +19,7 @@ SELECT
    
         ;WITH PatientEncounters AS (
 			SELECT DISTINCT
-				en.type as EncounterType,
 				dep.DepartmentSpecialty,
-                en.PatientDurableKey, 
-                en.PatientKey,
-				en.DateKey, --This date is of the start of the encounter, visit
-				en.ProviderKey,
-				en.ProviderDurableKey,
-				en.PrimaryDiagnosisKey,
 				pat.PatientEpicId,
 				pat.DurableKey,
 				pat.LastName,
@@ -97,17 +72,23 @@ SELECT
 				DischargeProviderDurableKey,
 				AdmissionSourceCode,
 				DischargeDispositionCode,
-				ServiceAreaEpicId
-            FROM CDW_report.FullAccess.EncounterFact en 
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
-				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
-                LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
-            WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
-				AND en.[Type] IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Hospital Encounter',
-				'Office Visit', 'Clinical Support',' Behavioral Health', 'Nurse Triage', 'Results Follow-Up', 'Telemedicine, IMAT')
-				AND dep.DepartmentSpecialty IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Sports Medicine','Rehabilitation','Orthopedic')
-				AND DerivedEncounterStatus <> 'Invalid'
+				ServiceAreaEpicId,
+                en.PatientDurableKey, 
+                en.PatientKey,
+				en.DateKey, --This date is of the start of the encounter, visit
+				en.ProviderKey,
+				en.ProviderDurableKey,
+				en.PrimaryDiagnosisKey
+            FROM CDW_report.FullAccess.MedicationDispenseFact as meds
+				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON meds.PatientDurableKey = pat.DurableKey AND meds.PatientKey = pat.PatientKey
+				LEFT JOIN CDW_report.FullAccess.EncounterFact as en ON en.EncounterKey = meds.EncounterKey
+				LEFT JOIN CDW_report.FullAccess.ProviderDim prov ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
+                LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON meds.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
+            WHERE 
+			meds.DispenseReceivedDateKey BETWEEN @StartDateInt AND @EndDateInt
+			AND meds.Mode =  'Outpatient'
+			AND en.DerivedEncounterStatus <> 'Invalid'
         ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
@@ -117,7 +98,7 @@ SELECT
             FROM PatientEncounters p
 				INNER JOIN CLARITY.dbo.OTHER_COMMUNCTN ph WITH (NOLOCK)
 					ON p.PatientEpicId = ph.PAT_ID
-					AND ph.OTHER_COMMUNIC_C = 1  AND ph.CONTACT_PRIORITY = 1
+					AND ph.OTHER_COMMUNIC_C = 1
         ),
 		        -- Crosstab each surgery case into 6 procedure using a CTE
                 -- This will allow us to have a fixed number of columns for the CPT codes
@@ -151,7 +132,7 @@ SELECT
 -- Select the required fields and format them as per the new Press Ganey file format
 -- Ensure to handle NULL values and format dates correctly
 SELECT DISTINCT
-    [Survey Designator] = 'OU0101', --TODO: Update this to the correct survey designator if needed
+    [Survey Designator] = 'SP0101', --TODO: Update this to the correct survey designator if needed
     [Client ID] = loc.PressGaneyId,
     [Last Name] = inpat.LastName,
     [Middle Initial] =  ISNULL(LEFT(inpat.MiddleName, 1), ''),
@@ -166,7 +147,7 @@ SELECT DISTINCT
     [Mobile Number] = ISNULL(mn.OTHER_COMMUNIC_NUM,'') ,
     [MS-DRG] = ISNULL(drg.Code,''),
     -- '1' = Male, '2' = Female, 'U' = Unknown/Other
-    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
+    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'U' END,
     [Race] = 
         CASE 
             WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
@@ -213,16 +194,17 @@ SELECT DISTINCT
     [Patient Admission Source] = inpat.AdmissionSourceCode,
     [Visit or Admit Date] = CASE 
         WHEN inpat.AdmissionDateKey = '-1' THEN '' -- Return blank if -1
+        WHEN inpat.AdmissionDateKey = '-2' THEN '' -- Return blank if -2
         WHEN inpat.AdmissionDateKey IS NULL THEN '' -- Return blank if NULL
         ELSE FORMAT(CONVERT(DATE, CAST(inpat.AdmissionDateKey AS CHAR(8)), 112),'MMddyyyy')
     END, 
     [Visit or Admit Time] = RIGHT('0000' + CAST(inpat.AdmissionTimeOfDayKey AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
     [Discharge Date] = CASE 
         WHEN inpat.DischargeDateKey = '-1' THEN '' -- Return blank if -1
+        WHEN inpat.DischargeDateKey = '-2' THEN '' -- Return blank if -2
         WHEN inpat.DischargeDateKey IS NULL THEN '' -- Return blank if NULL
         ELSE FORMAT(CONVERT(DATE, CAST(inpat.DischargeDateKey AS CHAR(8)), 112),'MMddyyyy')
     END, -- Format the date to MMddyyyy      
-
     [Patient Discharge Status] = inpat.DischargeDispositionCode,
     [Unit] = inpat.DepartmentName,
     [Service] = HospitalService,

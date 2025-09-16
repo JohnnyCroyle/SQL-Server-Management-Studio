@@ -1,3 +1,4 @@
+
 DECLARE @StartDate VARCHAR(10) = '08/21/2025',
         @EndDate   VARCHAR(10) = '08/21/2025',
         @StartDateInt BIGINT,
@@ -11,9 +12,6 @@ SELECT
 	@StartDateInt =  20250821,
 	@EndDateInt = 20250821;
 
-
-
-
 -- Select patient encounters for the specified date range and service area
 -- and filter by specific types of encounters
 -- This will be the driver for the data we need to pull
@@ -21,7 +19,16 @@ SELECT
    
         ;WITH PatientEncounters AS (
 			SELECT DISTINCT
-				en.type,
+				en.type as EncounterType,
+				dep.DepartmentSpecialty,
+                en.PatientDurableKey, 
+                en.PatientKey,
+				en.DateKey, --This date is of the start of the encounter, visit
+				en.ProviderKey,
+				en.ProviderDurableKey,
+				en.PrimaryDiagnosisKey,
+				pat.PatientEpicId,
+				pat.DurableKey,
 				pat.LastName,
 				pat.MiddleName,
 				pat.FirstName,
@@ -41,51 +48,55 @@ SELECT
 				pat.EnterpriseId,
 				pat.DeathDate,
 				pat.EmailAddress,
-                en.PatientDurableKey, 
-                en.PatientKey, 
-                en.DepartmentKey,
+				pat.AgeInYears,
+				dep.LocationEpicId,
+				dep.LocationName,
+				prov.Npi,
+				prov.Name as ProviderName,
+				prov.Type as ProviderType,
+				prov.PrimarySpecialty as ProviderSpeciality,
+				dep.Address as ProviderAddress,
+				dep.City as ProviderCity,
+				dep.StateOrProvinceAbbreviation as ProviderState,
+				dep.PostalCode as ProviderZipcode,
+				dep.DepartmentKey,
+                dep.DepartmentEpicId,
+				dep.DepartmentName,
+				dep.IsBed,
+				dep.RoomName,
+				dep.BedName,
                 en.EncounterKey,
                 en.AdmissionSource,
-                en.DischargeDisposition,
-                en.PatientClass,
-				NULL as AdmissionTimeOfDayKey, --Not required for Press Ganey
-                NULL as DischargeTimeOfDayKey, --Not required for Press Ganey 
+                DischargeDisposition,
+                PatientClass,
+				bill.DiagnosisComboKey,
 				en.DateKey as AdmissionDateKey, --This date is of the start of the encounter. Will use for Visits
                 --NOTE to self: This is the date of the encounter, not the admission date. 
                 --Probably should be used for Visits and not Admissions
 				en.DischargeDateKey,
-				--bill.AdmittingProviderDurableKey,
-				en.DischargeProviderDurableKey,
-				en.PrimaryDiagnosisKey,
-				--bill.PrimaryCoverageKey,
-				en.AdmissionSourceCode,
-				en.DischargeDispositionCode,
-				NULL as AttendingProviderDurableKey,
-				loc.ServiceAreaEpicId,
-				en.ProviderKey,
-				en.ProviderDurableKey,
-				bill.DiagnosisComboKey
-
+				NULL as AdmissionTimeOfDayKey, --Not required for Press Ganey
+                NULL as DischargeTimeOfDayKey, --Not required for Press Ganey 
+				DischargeProviderDurableKey,
+				AdmissionSourceCode,
+				DischargeDispositionCode,
+				ServiceAreaEpicId
             FROM CDW_report.FullAccess.EncounterFact en 
 				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
-				INNER JOIN CDW_report.FullAccess.ProviderDim prov  ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep  ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.LocationEpicId NOT IN ('11016', '11017')
-				INNER JOIN CDW_report.FullAccess.MedicationEventFact meds ON meds.EncounterKey = en.EncounterKey
-                INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
-                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND en.PatientKey = bill.PatientKey
-               	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
+				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
+                LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
             WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
-				AND en.[Type] like ('Pharmacy Visit')
-				AND loc.ServiceAreaEpicId = '110'
-                AND d.Years > 17 -- exclude pediatric
-				AND meds.Mode =  'Outpatient'
+				AND en.[Type] IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Hospital Encounter',
+				'Office Visit', 'Clinical Support',' Behavioral Health', 'Nurse Triage', 'Results Follow-Up', 'Telemedicine, IMAT')
+				AND dep.DepartmentSpecialty IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Sports Medicine','Rehabilitation','Orthopedic')
+				AND DerivedEncounterStatus <> 'Invalid'
         ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
                 p.DurableKey AS PatientDurableKey,
                 ph.OTHER_COMMUNIC_NUM,
                 ROW_NUMBER() OVER (PARTITION BY p.DurableKey ORDER BY ph.CONTACT_PRIORITY) AS rn
-            FROM CDW_report.FullAccess.PatientDim p
+            FROM PatientEncounters p
 				INNER JOIN CLARITY.dbo.OTHER_COMMUNCTN ph WITH (NOLOCK)
 					ON p.PatientEpicId = ph.PAT_ID
 					AND ph.OTHER_COMMUNIC_C = 1
@@ -122,7 +133,7 @@ SELECT
 -- Select the required fields and format them as per the new Press Ganey file format
 -- Ensure to handle NULL values and format dates correctly
 SELECT DISTINCT
-    [Survey Designator] = 'SP0101', --TODO: Update this to the correct survey designator if needed
+    [Survey Designator] = 'OU0101', --TODO: Update this to the correct survey designator if needed
     [Client ID] = loc.PressGaneyId,
     [Last Name] = inpat.LastName,
     [Middle Initial] =  ISNULL(LEFT(inpat.MiddleName, 1), ''),
@@ -168,19 +179,19 @@ SELECT DISTINCT
 	[Language] = '99',
     [Medical Record Number] = inpat.EnterpriseId,
     [Unique ID] = inpat.EncounterKey,
-    [Location Code] = dep.LocationEpicId,
-    [Location Name] = dep.LocationName,
-    [Department Code] = dep.DepartmentEpicId,
-    [Department Name] = dep.DepartmentName,
-    [Attending Physician NPI] = prov.Npi,
-    [Attending Physician Name] = prov.Name,
-    [Provider Type] = prov.Type,
-    [Provider specialty] = prov.PrimarySpecialty,
-    [Site address 1] = dep.Address,
+    [Location Code] = inpat.LocationEpicId,
+    [Location Name] = inpat.LocationName,
+    [Department Code] = inpat.DepartmentEpicId,
+    [Department Name] = inpat.DepartmentName,
+    [Attending Physician NPI] = inpat.Npi,
+    [Attending Physician Name] = inpat.ProviderName,
+    [Provider Type] = inpat.ProviderType,
+    [Provider specialty] = inpat.ProviderSpeciality,
+    [Site address 1] = inpat.ProviderAddress,
     [Site address 2] = '',
-    [Site city] = dep.City,
-    [Site state] = dep.StateOrProvinceAbbreviation,
-    [Site zip] = dep.PostalCode,
+    [Site city] = inpat.ProviderCity,
+    [Site state] = inpat.ProviderState,
+    [Site zip] = inpat.ProviderZipcode,
     [Patient Admission Source] = inpat.AdmissionSourceCode,
     [Visit or Admit Date] = CASE 
         WHEN inpat.AdmissionDateKey = '-1' THEN '' -- Return blank if -1
@@ -195,14 +206,14 @@ SELECT DISTINCT
     END, -- Format the date to MMddyyyy      
 
     [Patient Discharge Status] = inpat.DischargeDispositionCode,
-    [Unit] = dep.DepartmentName,
+    [Unit] = inpat.DepartmentName,
     [Service] = HospitalService,
-    [Specialty] = dep.DepartmentSpecialty,
+    [Specialty] = inpat.DepartmentSpecialty,
     [Payor / Insurance / Financial Class] = '',-- cov.PayorName, -- Not required for Press Ganey
     --[Payor / Insurance / Financial Class] = cov.PayorName, 
     [Length of Stay] = LengthOfStayInDays,
-    [Room] = bed.RoomName,
-    [Bed] = bed.BedName,
+    [Room] = inpat.RoomName,
+    [Bed] = inpat.BedName,
     [Hospitalist] = '',
     [Fast Track or Acute Flag] = '',
     [Email] = inpat.EmailAddress,
@@ -220,22 +231,22 @@ SELECT DISTINCT
     [No Publicity Flag] = 'N',
     [State Regulation Flag] = 'N',
     [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
-    [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.Type = 'Surgery'  THEN 'Y' ELSE 'N' END,
+    [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.ProviderType = 'Surgery'  THEN 'Y' ELSE 'N' END,
     '$' EOR
 FROM PatientEncounters inpat 
-	--INNER JOIN CDW_Report.FullAccess.PatientDim pat WITH (NOLOCK) ON inpat.PatientDurableKey = pat.DurableKey AND inpat.PatientKey = pat.PatientKey
-	INNER JOIN CDW_report.FullAccess.ProviderDim prov WITH (NOLOCK) ON inpat.ProviderDurableKey = prov.DurableKey AND inpat.ProviderKey = prov.ProviderKey
-	INNER JOIN CDW_Report.FullAccess.DepartmentDim dep WITH (NOLOCK) ON inpat.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 --AND dep.LocationEpicId NOT IN ('11016', '11017')
-	LEFT JOIN CDW_report.FullAccess.DrgDim drg WITH (NOLOCK )ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
-	LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
-	LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm WITH (NOLOCK)	ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
-	--LEFT JOIN CDW_report.FullAccess.CoverageDim cov WITH (NOLOCK) ON inpat.PrimaryCoverageKey = cov.CoverageKey -- Not required for Press Ganey	
-	LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc WITH (NOLOCK) ON inpat.DepartmentKey = loc.DepartmentKey
-	LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha WITH (NOLOCK)	ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
-	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq WITH (NOLOCK)	ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey
-	LEFT JOIN CDW_report.FullAccess.DepartmentDim bed WITH (NOLOCK)	ON bed.DepartmentKey = bedreq.DestinationBedKey AND bed.IsBed = 1
+	LEFT JOIN CDW_report.FullAccess.DrgDim drg ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
+	LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia  ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
+	LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
+	LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc ON inpat.DepartmentKey = loc.DepartmentKey
+	LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
+	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON inpat.PatientDurableKey = mn.PatientDurableKey AND mn.rn = 1
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
 	--LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
-WHERE loc.PressGaneyId IS NOT NULL AND	inpat.ServiceAreaEpicId = '110'
+WHERE loc.PressGaneyId IS NOT NULL 
+
+
+
+
+

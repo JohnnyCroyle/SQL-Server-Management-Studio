@@ -1,34 +1,16 @@
-/*-- =============================================
------- Author:		Johnny Croyle
------- Create date: 08/13/2025
------- Description:	get dataset for Press Ganey's New File Format for Survey's
------- This pull will be Encounter based
------- and will include all services
------- for MaineHealth
-------
------- This is a test file for the new format
------- for Press Ganey
------- Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
------- Added Mobile Number to the file. 8/22/2025  
------- Added CPT codes to the file. 8/22/2025
------- Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
-
-
-
------- =============================================*/
-
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/07/2025',
+        @EndDate   VARCHAR(10) = '01/02/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
+
 SELECT 
-	@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
-    @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
+	--@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
+ --   @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
 
 
-	--@StartDateInt =  20250821,
-	--@EndDateInt = 20250821;
+	@StartDateInt =  20250821,
+	@EndDateInt = 20250821;
 
 -- Select patient encounters for the specified date range and service area
 -- and filter by specific types of encounters
@@ -37,7 +19,7 @@ SELECT
    
         ;WITH PatientEncounters AS (
 			SELECT DISTINCT
-				en.type as EncounterType,
+				--en.type as EncounterType,
 				dep.DepartmentSpecialty,
                 en.PatientDurableKey, 
                 en.PatientKey,
@@ -117,7 +99,7 @@ SELECT
             FROM PatientEncounters p
 				INNER JOIN CLARITY.dbo.OTHER_COMMUNCTN ph WITH (NOLOCK)
 					ON p.PatientEpicId = ph.PAT_ID
-					AND ph.OTHER_COMMUNIC_C = 1  AND ph.CONTACT_PRIORITY = 1
+					AND ph.OTHER_COMMUNIC_C = 1
         ),
 		        -- Crosstab each surgery case into 6 procedure using a CTE
                 -- This will allow us to have a fixed number of columns for the CPT codes
@@ -166,7 +148,7 @@ SELECT DISTINCT
     [Mobile Number] = ISNULL(mn.OTHER_COMMUNIC_NUM,'') ,
     [MS-DRG] = ISNULL(drg.Code,''),
     -- '1' = Male, '2' = Female, 'U' = Unknown/Other
-    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
+    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'U' END,
     [Race] = 
         CASE 
             WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'

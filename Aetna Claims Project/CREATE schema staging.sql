@@ -2,3 +2,5 @@
 
 CREATE SCHEMA staging;
 GO
+CREATE SCHEMA fact;
+GO
