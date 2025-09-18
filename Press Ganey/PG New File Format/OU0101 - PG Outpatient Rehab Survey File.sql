@@ -6,6 +6,7 @@
 ------ and will include all services
 ------ for MaineHealth
 ------
+------ REHAB - OU0101
 ------ This is a test file for the new format
 ------ for Press Ganey
 ------ Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
@@ -23,12 +24,12 @@ DECLARE @StartDate VARCHAR(10) = '01/01/2025',
         @EndDateInt   BIGINT;
 
 SELECT 
-	@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
-    @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
+	--@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
+ --   @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
 
 
-	--@StartDateInt =  20250821,
-	--@EndDateInt = 20250821;
+	@StartDateInt =  20250821,
+	@EndDateInt = 20250821;
 
 -- Select patient encounters for the specified date range and service area
 -- and filter by specific types of encounters
@@ -99,7 +100,7 @@ SELECT
 				DischargeDispositionCode,
 				ServiceAreaEpicId
             FROM CDW_report.FullAccess.EncounterFact en 
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
+				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
 				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
 				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
                 LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
@@ -263,6 +264,8 @@ FROM PatientEncounters inpat
 	--LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
 WHERE loc.PressGaneyId IS NOT NULL 
+
+--Order by [Last Name]
 
 
 

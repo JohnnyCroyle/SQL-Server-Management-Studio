@@ -19,7 +19,6 @@ SELECT
 			SELECT DISTINCT 
 			--meds.OrderName,
 			--meds.*,
-			RxNumber,
 				dep.DepartmentSpecialty,
 				pat.PatientEpicId,
 				pat.DurableKey,
@@ -91,7 +90,7 @@ SELECT
 			AND meds.Mode =  'Outpatient'
 			AND FillStatus = 'Dispensed'
 
-			--AND PatientEpicId = 'Z2970218' --two different med orders from 2 diff providers
+			--AND EnterpriseId = 'E4191338 ' --two different med orders from 2 diff providers
 
 			Order by LastName
 
@@ -107,3 +106,5 @@ SELECT
 
 			--Select DispensePreparedDateKey,DispensePreparedInstant,DispensePreparedUtcInstant,* from CDW_report.FullAccess.MedicationDispenseFact 
 			--where RxNumber IN ('61089179201','61089029301')
+
+

@@ -1,7 +1,7 @@
 
 
 DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/02/2025',
+        @EndDate   VARCHAR(10) = '01/07/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
@@ -13,8 +13,9 @@ SELECT
 -- and filter by specific types of encounters
 
 			SELECT DISTINCT
-				--meds.*,
-				en.type,
+				dep.DepartmentSpecialty,
+				pat.PatientEpicId,
+				pat.DurableKey,
 				pat.LastName,
 				pat.MiddleName,
 				pat.FirstName,
@@ -34,51 +35,58 @@ SELECT
 				pat.EnterpriseId,
 				pat.DeathDate,
 				pat.EmailAddress,
-                en.PatientDurableKey, 
-                en.PatientKey, 
-                en.DepartmentKey,
-                en.EncounterKey,
-                en.AdmissionSource,
-                en.DischargeDisposition,
-                en.PatientClass,
-				NULL as AdmissionTimeOfDayKey, --Not required for Press Ganey
-                NULL as DischargeTimeOfDayKey, --Not required for Press Ganey 
-				en.DateKey as AdmissionDateKey, --This date is of the start of the encounter. Will use for Visits
-                --NOTE to self: This is the date of the encounter, not the admission date. 
-                --Probably should be used for Visits and not Admissions
-				en.DischargeDateKey,
-				--bill.AdmittingProviderDurableKey,
-				en.DischargeProviderDurableKey,
-				en.PrimaryDiagnosisKey,
-				--bill.PrimaryCoverageKey,
-				en.AdmissionSourceCode,
-				en.DischargeDispositionCode,
-				NULL as AttendingProviderDurableKey,
-				loc.ServiceAreaEpicId,
-				en.ProviderKey,
-				en.ProviderDurableKey
-				--bill.DiagnosisComboKey
-
-            FROM CDW_report.FullAccess.EncounterFact en 
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
-				INNER JOIN CDW_report.FullAccess.ProviderDim prov  ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep  ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.LocationEpicId NOT IN ('11016', '11017')
-				INNER JOIN CDW_report.FullAccess.MedicationEventFact meds ON meds.EncounterKey = en.EncounterKey
-                INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
-                INNER JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND en.PatientKey = bill.PatientKey
-               	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
-            WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
-				AND en.[Type] like ('Pharmacy Visit')
-				AND loc.ServiceAreaEpicId = '110'
-                AND d.Years > 17 -- exclude pediatric
-				AND meds.Mode =  'Outpatient'
+				pat.AgeInYears,
+				dep.LocationEpicId,
+				dep.LocationName,
+				prov.Npi,
+				prov.Name as ProviderName,
+				prov.Type as ProviderType,
+				prov.PrimarySpecialty as ProviderSpeciality,
+				dep.Address as ProviderAddress,
+				dep.City as ProviderCity,
+				dep.StateOrProvinceAbbreviation as ProviderState,
+				dep.PostalCode as ProviderZipcode,
+				dep.DepartmentKey,
+                dep.DepartmentEpicId,
+				dep.DepartmentName,
+				dep.IsBed,
+				dep.RoomName,
+				dep.BedName,
+				dep.ServiceAreaEpicId,
+                meds.MedicationDispenseKey as EncounterKey, -- this is not encounter key but I need a Prim key for tracking
+				meds.PatientDurableKey,
+				meds.PatientKey,
+                NULL as AdmissionSource,
+                NULL as DischargeDisposition,
+                NULL as PatientClass,
+				NULL as AdmissionTimeOfDayKey,
+				NULL as DischargeTimeOfDayKey,
+				DispenseReceivedDateKey as AdmissionDateKey,
+			    NULL as DischargeDateKey,
+				NULL as DischargeProviderDurableKey,
+				NULL as AdmissionSourceCode,
+				NULL as DischargeDispositionCode,
+				NULL as DiagnosisComboKey,
+				NULL as PrimaryDiagnosisKey,
+				DispensePreparedDateKey as DateKey  --This date is of the start of the encounter, visit, etc
+            FROM CDW_report.FullAccess.MedicationDispenseFact as meds
+				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON meds.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
+				LEFT JOIN CDW_report.FullAccess.MedicationOrderFact as medorder ON  medorder.MedicationOrderKey = meds.MedicationOrderKey 
+																		AND  medorder.SentToPharmacyKey = meds.DispensePharmacyKey 
+																		AND medorder.PatientDurableKey = pat.DurableKey 
+				LEFT JOIN CDW_report.FullAccess.ProviderDim prov ON  prov.ProviderKey = medorder.OrderedByProviderKey 
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON meds.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
+            WHERE 
+			meds.DispensePreparedDateKey BETWEEN @StartDateInt AND @EndDateInt
+			AND meds.Mode =  'Outpatient'
+			AND FillStatus = 'Dispensed'
 
 
 
 
 --Select * from CDW_report.dbo.BillingAccountFact
 
-
+--Select * from CDW_report.FullAccess.MedicationDispenseFact
 
 				--Select DISTINCT AdministrationAction from CDW_report.FullAccess.MedicationEventFact 
 				--where Mode =  'Outpatient'

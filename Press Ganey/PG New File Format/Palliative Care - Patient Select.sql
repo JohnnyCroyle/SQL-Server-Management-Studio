@@ -11,7 +11,8 @@ SELECT
 
 	@StartDateInt =  20250821,
 	@EndDateInt = 20250821;
-	
+
+
 
 -- Select patient encounters for the specified date range and service area
 -- and filter by specific types of encounters
@@ -67,13 +68,13 @@ SELECT
 				en.ProviderKey,
 				en.ProviderDurableKey,
 				en.PrimaryDiagnosisKey,
-				--bill.PrimaryCoverageKey,
+				bill.PrimaryCoverageKey,
                 en.AdmissionSource,
                 DischargeDisposition,
                 PatientClass,
-				--bill.DiagnosisComboKey,
-				--en.AdmittingProviderDurableKey,
-				--bill.AttendingProviderDurableKey,
+				bill.DiagnosisComboKey,
+				en.AdmittingProviderDurableKey,
+				bill.AttendingProviderDurableKey,
 				DischargeProviderDurableKey,
 				AdmissionSourceCode,
 				DischargeDispositionCode,
@@ -85,34 +86,10 @@ SELECT
 				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
                 LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
             WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
-				AND en.[Type] IN ('Office Visit','Clinical Support','Behavioral Health','Nurse Triage','Results Follow-Up','Telemedicine','IMAT','Hospital Encounter')
-				AND dep.DepartmentSpecialty IN ('Family Medicine','Primary Care','Multi-Specialty','Emergency Medicine')
+				AND en.[Type] IN ('Office Visit','Clinical Support','Behavioral Health','Nurse Triage','Results Follow-Up','Telemedicine','IMAT')
+				AND dep.DepartmentSpecialty = 'Palliative Care'
+				And en.VisitTypeKey <> -1
 				AND DerivedEncounterStatus = 'Complete'
-
-
-				AND  EnterpriseId IN ('E424662','E442724','E460384','E476402','E500288','E500858')
-
-
---				Hospital Encounter
---History
---Hospital Encounter
---Hospital Encounter
---Hospital Encounter
---History
---Hospital Encounter
---Office Visit
---Hospital Encounter
---Telephone
-
---'E506942,'
---'E514383,'
---'E26594,'
---'E538661,'
---'E540589,'
---'E573163,'
---'E596750,'
---'E607452,')
-
 
 				Order by LastName
 
@@ -121,28 +98,3 @@ SELECT
 
 
 
-
-
-
-
-				--Select DISTINCT (Type) from CDW_report.FullAccess.EncounterFact order by Type
-
-
-				--Select * from CDW_report.dbo.BillingAccountFact
-
-
-				--Select DISTINCT (DepartmentSpecialty) from CDW_Report.FullAccess.DepartmentDim order by DepartmentSpecialty
-
-
-				--Select DISTINCT AdministrationAction from CDW_report.FullAccess.MedicationEventFact 
-				--where Mode =  'Outpatient'
-				
-				--AdministrationAction NOT IN  ('*Unspecified','*Deleted') order by AdministrationDateKey desc
-
-
-
-
-				--Select * from CDW_report.FullAccess.MedicationEventFact where 
-				--Mode =  'Outpatient'  and 
-				
-				--AdministrationAction NOT IN  ('*Unspecified','*Deleted')

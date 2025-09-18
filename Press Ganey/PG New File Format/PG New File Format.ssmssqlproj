@@ -31,6 +31,24 @@
     </LogicalFolder>
     <LogicalFolder Name="Queries" Type="0" Sorted="true">
       <Items>
+        <FileNode Name="Control to call Stored Procs.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>Control to call Stored Procs.sql</FullPath>
+        </FileNode>
+        <FileNode Name="CREATE PROCEDURE [dbo].[sp_PressGaney_OU0101_Rehab].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE PROCEDURE [dbo].[sp_PressGaney_OU0101_Rehab].sql</FullPath>
+        </FileNode>
+        <FileNode Name="CREATE PROCEDURE [dbo].[sp_PressGaney_SP0101_Pharmacy].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE PROCEDURE [dbo].[sp_PressGaney_SP0101_Pharmacy].sql</FullPath>
+        </FileNode>
         <FileNode Name="CREATE TABLE [dbo].[PG_Survey_Language_Codes] AND INSERTS.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
@@ -43,11 +61,41 @@
           <AssociatedConnUserName />
           <FullPath>CREATE TABLE [dbo].[PG_Survey_Language_Codes].sql</FullPath>
         </FileNode>
+        <FileNode Name="CREATE TABLE [dbo].[PressGaney_TrackingRecords_NFF].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE TABLE [dbo].[PressGaney_TrackingRecords_NFF].sql</FullPath>
+        </FileNode>
+        <FileNode Name="CREATE TABLE [dbo].[PressGaneyDailyFile].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE TABLE [dbo].[PressGaneyDailyFile].sql</FullPath>
+        </FileNode>
         <FileNode Name="DROP TABLE TO CREATE [dbo].[PressGaneySurveyMap] AND INSERT DATA.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
           <FullPath>DROP TABLE TO CREATE [dbo].[PressGaneySurveyMap] AND INSERT DATA.sql</FullPath>
+        </FileNode>
+        <FileNode Name="NICU - Patient Select.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>NICU - Patient Select.sql</FullPath>
+        </FileNode>
+        <FileNode Name="NICU - PG NICU File.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>NICU - PG NICU File.sql</FullPath>
+        </FileNode>
+        <FileNode Name="Palliative Care - Patient Select.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>Palliative Care - Patient Select.sql</FullPath>
         </FileNode>
         <FileNode Name="Rehab - Patient Select.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
@@ -56,10 +104,16 @@
           <FullPath>Rehab - Patient Select.sql</FullPath>
         </FileNode>
         <FileNode Name="SP0101 - PG Pharmacy Survey File.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTP2:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>COGITORPTP2</AssociatedConnSrvName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>SP0101 - PG Pharmacy Survey File.sql</FullPath>
+        </FileNode>
+        <FileNode Name="SP0102HX - PG Palliative care Survey File.sql">
+          <AssociatedConnectionMoniker />
+          <AssociatedConnSrvName />
+          <AssociatedConnUserName />
+          <FullPath>SP0102HX - PG Palliative care Survey File.sql</FullPath>
         </FileNode>
         <FileNode Name="testing rehab after trang.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTP2:True</AssociatedConnectionMoniker>
@@ -67,9 +121,15 @@
           <AssociatedConnUserName />
           <FullPath>testing rehab after trang.sql</FullPath>
         </FileNode>
+        <FileNode Name="UC0101 - PG Urgent Care Survey File.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTP2:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTP2</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>UC0101 - PG Urgent Care Survey File.sql</FullPath>
+        </FileNode>
         <FileNode Name="Urgent Care - Patient Select.sql">
-          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
-          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTP2:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTP2</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>Urgent Care - Patient Select.sql</FullPath>
         </FileNode>

@@ -13,5 +13,4 @@ FROM [AetnaClaims_DEV].[staging].[MemberClaims]
 
 
 
-
-Anne  Kornkven                          
+                        
