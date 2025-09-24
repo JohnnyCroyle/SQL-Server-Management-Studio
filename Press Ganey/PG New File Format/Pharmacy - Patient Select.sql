@@ -13,6 +13,7 @@ SELECT
 -- and filter by specific types of encounters
 
 			SELECT DISTINCT
+
 				dep.DepartmentSpecialty,
 				pat.PatientEpicId,
 				pat.DurableKey,
@@ -49,6 +50,7 @@ SELECT
 				dep.DepartmentKey,
                 dep.DepartmentEpicId,
 				dep.DepartmentName,
+				'' as PharmacyType,
 				dep.IsBed,
 				dep.RoomName,
 				dep.BedName,
@@ -73,7 +75,8 @@ SELECT
 				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON meds.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
 				LEFT JOIN CDW_report.FullAccess.MedicationOrderFact as medorder ON  medorder.MedicationOrderKey = meds.MedicationOrderKey 
 																		AND  medorder.SentToPharmacyKey = meds.DispensePharmacyKey 
-																		AND medorder.PatientDurableKey = pat.DurableKey 
+																		AND medorder.PatientDurableKey = pat.DurableKey
+				--LEFT JOIN CDW_report.FullAccess.PharmacyDim as Phm ON meds.DispensePharmacyKey  = Phm.PharmacyKey																		
 				LEFT JOIN CDW_report.FullAccess.ProviderDim prov ON  prov.ProviderKey = medorder.OrderedByProviderKey 
 				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON meds.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
             WHERE 
@@ -86,7 +89,7 @@ SELECT
 
 --Select * from CDW_report.dbo.BillingAccountFact
 
---Select * from CDW_report.FullAccess.MedicationDispenseFact
+--Select * from CDW_report.FullAccess.PharmacyDim
 
 				--Select DISTINCT AdministrationAction from CDW_report.FullAccess.MedicationEventFact 
 				--where Mode =  'Outpatient'

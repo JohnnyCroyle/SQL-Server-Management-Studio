@@ -90,7 +90,7 @@ SELECT
 				AND DerivedEncounterStatus = 'Complete'
 
 
-				AND  EnterpriseId IN ('E424662','E442724','E460384','E476402','E500288','E500858')
+				--AND  EnterpriseId IN ('E424662','E442724','E460384','E476402','E500288','E500858')
 
 
 --				Hospital Encounter

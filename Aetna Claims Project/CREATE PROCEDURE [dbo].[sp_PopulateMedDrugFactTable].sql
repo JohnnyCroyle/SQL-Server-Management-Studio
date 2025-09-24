@@ -1,4 +1,4 @@
-USE [AetnaClaims_DEV]
+USE [AetnaClaims]
 GO
 /****** Object:  StoredProcedure [dbo].[sp_PopulateMedRetailPharmacyFactTable]    Script Date: 9/10/2025 9:42:10 AM ******/
 SET ANSI_NULLS ON
@@ -28,7 +28,7 @@ BEGIN TRY
 	SET NOCOUNT ON;
 
 
-INSERT INTO AetnaClaims_DEV.fact.MemberRetailPharmacyClaims 
+INSERT INTO AetnaClaims.fact.MemberRetailPharmacyClaims 
 SELECT 
     CAST(TRIM(ps_unique_id) AS VARCHAR(255)) AS ps_unique_id,
     CAST(TRIM(customer_nbr) AS VARCHAR(255)) AS customer_nbr,
@@ -111,19 +111,19 @@ SELECT
 	'sp_PopulateMedEligibilityFactTable' CreatedBy,
 	GETDATE() Updated_Date,
 	'sp_PopulateMedEligibilityFactTable' Updated_By
---INTO AetnaClaims_DEV.fact.MemberRetailPharmacyClaims 
+--INTO AetnaClaims.fact.MemberRetailPharmacyClaims 
 
-FROM AetnaClaims_DEV.staging.MemberRetailPharmacyClaims AS s
+FROM AetnaClaims.staging.MemberRetailPharmacyClaims AS s
 WHERE NOT EXISTS (
 	SELECT 1 
-	FROM [AetnaClaims_DEV].[fact].[MemberRetailPharmacyClaims] AS f
+	FROM [AetnaClaims].[fact].[MemberRetailPharmacyClaims] AS f
 	WHERE f.member_id = s.member_id
 	  AND f.rx_claim_id = s.rx_claim_id )
 
 
 
 --Delete records from staging table NOT Sure if we need to remove from staging after
---TRUNCATE TABLE AetnaClaims_DEV.staging.MemberRetailPharmacyClaims
+--TRUNCATE TABLE AetnaClaims.staging.MemberRetailPharmacyClaims
 
 
 

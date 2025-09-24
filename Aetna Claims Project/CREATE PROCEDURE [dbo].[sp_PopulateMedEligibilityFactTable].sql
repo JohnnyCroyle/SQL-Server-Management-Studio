@@ -1,4 +1,4 @@
-USE [AetnaClaims_DEV]
+USE [AetnaClaims]
 GO
 /****** Object:  StoredProcedure [dbo].[sp_PopulateMedEligibilityFactTable]    Script Date: 9/10/2025 9:42:10 AM ******/
 SET ANSI_NULLS ON
@@ -15,7 +15,7 @@ GO
 ------ =============================================*/
 
 
-CREATE PROCEDURE [dbo].[sp_PopulateMedEligibilityDrugTable] @filename varchar(255)
+ALTER PROCEDURE [dbo].[sp_PopulateMedEligibilityFactTable] @filename varchar(255)
 
 
 AS
@@ -27,7 +27,7 @@ DECLARE @dbName varchar(100) = 'dbName: ' +  DB_Name()
 BEGIN TRY
 	SET NOCOUNT ON;
 
-INSERT INTO [AetnaClaims_DEV].[fact].[MemberEligibility]
+INSERT INTO [AetnaClaims].[fact].[MemberEligibility]
 SELECT
 	TRIM(CAST(member_id AS varchar(255))) AS member_id,
 	TRIM(CAST(eff_mm AS varchar(10))) AS eff_mm,
@@ -123,10 +123,10 @@ SELECT
 	'sp_PopulateMedEligibilityFactTable' CreatedBy,
 	GETDATE() Updated_Date,
 	'sp_PopulateMedEligibilityFactTable' Updated_By
-FROM [AetnaClaims_DEV].[staging].[MemberEligibility] AS s
+FROM [AetnaClaims].[staging].[MemberEligibility] AS s
 WHERE NOT EXISTS (
 	SELECT 1 
-	FROM [AetnaClaims_DEV].[fact].[MemberEligibility] AS f
+	FROM [AetnaClaims].[fact].[MemberEligibility] AS f
 	WHERE f.member_id = s.member_id
 	  AND f.eff_mm = s.eff_mm
 )
@@ -134,7 +134,7 @@ WHERE NOT EXISTS (
 
 
 --Delete records from staging table NOT Sure if we need to remove from staging after
---TRUNCATE TABLE AetnaClaims_DEV.staging.Eligibility
+--TRUNCATE TABLE AetnaClaims.staging.Eligibility
 
 
 

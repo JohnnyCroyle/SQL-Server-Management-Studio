@@ -4,3 +4,5 @@ CREATE SCHEMA staging;
 GO
 CREATE SCHEMA fact;
 GO
+CREATE SCHEMA datamart;
+GO

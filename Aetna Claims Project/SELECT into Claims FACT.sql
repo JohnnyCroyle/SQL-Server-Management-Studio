@@ -1,4 +1,4 @@
-INSERT INTO [AetnaClaims_DEV].[fact].[MemberClaims]
+INSERT INTO [AetnaClaims].[fact].[MemberClaims]
 SELECT 
 	CAST(TRIM(member_id) AS varchar(255)),
 	CAST(TRIM(ps_unique_id) AS varchar(255)),
@@ -147,10 +147,10 @@ SELECT
 	'sp_PopulateMedClaimsFactTable' CreatedBy,
 	GETDATE() Updated_Date,
 	'sp_PopulateMedClaimsFactTable' Updated_By
-FROM AetnaClaims_DEV.staging.MemberClaims as s
+FROM AetnaClaims.staging.MemberClaims as s
 WHERE NOT EXISTS (
 	SELECT 1 
-	FROM [AetnaClaims_DEV].[fact].[MemberClaims] as f
+	FROM [AetnaClaims].[fact].[MemberClaims] as f
 	WHERE f.member_id = s.member_id
 	  AND f.claim_line_id = s.claim_line_id
 )

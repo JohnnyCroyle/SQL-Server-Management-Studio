@@ -37,6 +37,7 @@ CREATE TABLE [dbo].[PressGaneyDailyFile](
 	[Location Name] [nvarchar](255) NULL,
 	[Department Code] [nvarchar](255) NULL,
 	[Department Name] [nvarchar](255) NULL,
+	[Pharmacy Type] [nvarchar](255) NULL,
 	[Attending Physician NPI] [nvarchar](255) NULL,
 	[Attending Physician Name] [nvarchar](255) NULL,
 	[Provider Type] [nvarchar](255) NULL,

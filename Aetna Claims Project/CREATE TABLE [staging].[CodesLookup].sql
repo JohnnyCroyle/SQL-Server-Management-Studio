@@ -1,4 +1,4 @@
-USE [AetnaClaims_DEV]
+USE [AetnaClaims]
 GO
 
 /****** Object:  Table [staging].[CodesLookup]    Script Date: 8/15/2025 2:47:07 PM ******/

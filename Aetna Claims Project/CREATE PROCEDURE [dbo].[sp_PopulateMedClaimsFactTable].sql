@@ -1,4 +1,4 @@
-USE [AetnaClaims_DEV]
+USE [AetnaClaims]
 GO
 /****** Object:  StoredProcedure [dbo].[sp_PopulateMedClaimsFactTable]    Script Date: 9/10/2025 9:42:10 AM ******/
 SET ANSI_NULLS ON
@@ -27,7 +27,7 @@ DECLARE @dbName varchar(100) = 'dbName: ' +  DB_Name()
 BEGIN TRY
 	SET NOCOUNT ON;
 
-INSERT INTO [AetnaClaims_DEV].[fact].[MemberClaims]
+INSERT INTO [AetnaClaims].[fact].[MemberClaims]
 SELECT 
 	CAST(TRIM(member_id) AS varchar(255)),
 	CAST(TRIM(ps_unique_id) AS varchar(255)),
@@ -176,10 +176,10 @@ SELECT
 	'sp_PopulateMedClaimsFactTable' CreatedBy,
 	GETDATE() Updated_Date,
 	'sp_PopulateMedClaimsFactTable' Updated_By
-FROM AetnaClaims_DEV.staging.MemberClaims as s
+FROM AetnaClaims.staging.MemberClaims as s
 WHERE NOT EXISTS (
 	SELECT 1 
-	FROM [AetnaClaims_DEV].[fact].[MemberClaims] as f
+	FROM [AetnaClaims].[fact].[MemberClaims] as f
 	WHERE f.member_id = s.member_id
 	  AND f.claim_line_id = s.claim_line_id
 )
@@ -187,7 +187,7 @@ WHERE NOT EXISTS (
 
 
 --Delete records from staging table NOT Sure if we need to remove from staging after
---TRUNCATE TABLE AetnaClaims_DEV.staging.MemberClaims
+--TRUNCATE TABLE AetnaClaims.staging.MemberClaims
 
 
 

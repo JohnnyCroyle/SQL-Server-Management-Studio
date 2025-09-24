@@ -262,7 +262,9 @@ FROM PatientEncounters inpat
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
 	--LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
-WHERE loc.PressGaneyId IS NOT NULL 
+WHERE loc.PressGaneyId IS  NULL 
+
+
 
 --Order by [Last Name]
 

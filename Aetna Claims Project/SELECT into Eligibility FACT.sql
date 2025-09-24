@@ -1,4 +1,4 @@
-INSERT INTO [AetnaClaims_DEV].[fact].[MemberEligibility]
+INSERT INTO [AetnaClaims].[fact].[MemberEligibility]
 SELECT
 	TRIM(CAST(member_id AS varchar(255))) AS member_id,
 	TRIM(CAST(eff_mm AS varchar(10))) AS eff_mm,
@@ -94,9 +94,9 @@ SELECT
 	'sp_PopulateMedEligibilityFactTable' CreatedBy,
 	GETDATE() Updated_Date,
 	'sp_PopulateMedEligibilityFactTable' Updated_By
-FROM [AetnaClaims_DEV].[staging].[MemberEligibility] AS s
+FROM [AetnaClaims].[staging].[MemberEligibility] AS s
 WHERE NOT EXISTS (
 	SELECT 1 
-	FROM [AetnaClaims_DEV].[fact].[MemberEligibility] AS f
+	FROM [AetnaClaims].[fact].[MemberEligibility] AS f
 	WHERE f.member_id = s.member_id
 	  AND f.eff_mm = s.eff_mm )

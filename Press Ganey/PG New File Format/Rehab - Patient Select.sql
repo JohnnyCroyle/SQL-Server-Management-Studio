@@ -18,11 +18,11 @@ SELECT
                 en.PatientDurableKey, 
                 en.PatientKey,
 				en.DateKey, --This date is of the start of the encounter, visit
-				--bill.AdmissionTimeOfDayKey,
 				en.ProviderKey,
 				en.ProviderDurableKey,
 				en.PrimaryDiagnosisKey,
-				--bill.PrimaryCoverageKey,				
+				pat.PatientEpicId,
+				pat.DurableKey,
 				pat.LastName,
 				pat.MiddleName,
 				pat.FirstName,
@@ -42,7 +42,7 @@ SELECT
 				pat.EnterpriseId,
 				pat.DeathDate,
 				pat.EmailAddress,
-				--bill.AccountEpicId, --Using Ecounter Key as Unique Visit Number instead
+				pat.AgeInYears,
 				dep.LocationEpicId,
 				dep.LocationName,
 				prov.Npi,
@@ -56,6 +56,9 @@ SELECT
 				dep.DepartmentKey,
                 dep.DepartmentEpicId,
 				dep.DepartmentName,
+				dep.IsBed,
+				dep.RoomName,
+				dep.BedName,
                 en.EncounterKey,
                 en.AdmissionSource,
                 DischargeDisposition,
@@ -70,22 +73,17 @@ SELECT
 				DischargeProviderDurableKey,
 				AdmissionSourceCode,
 				DischargeDispositionCode,
-				loc.ServiceAreaEpicId
-
+				ServiceAreaEpicId
             FROM CDW_report.FullAccess.EncounterFact en 
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND en.PatientKey = pat.PatientKey
+				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
 				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 
-                INNER JOIN CDW_report.dbo.DurationDim d  ON en.AgeKey = d.DurationKey 
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
                 LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
-               	INNER JOIN CDW_report.FullAccess.DepartmentDim loc  ON en.DepartmentKey = loc.DepartmentKey
             WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
-
 				AND en.[Type] IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Hospital Encounter',
 				'Office Visit', 'Clinical Support',' Behavioral Health', 'Nurse Triage', 'Results Follow-Up', 'Telemedicine, IMAT')
-
 				AND dep.DepartmentSpecialty IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Sports Medicine','Rehabilitation','Orthopedic')
-                --AND d.Years > 17 -- exclude pediatric
+				AND DerivedEncounterStatus <> 'Invalid'
 
 
 

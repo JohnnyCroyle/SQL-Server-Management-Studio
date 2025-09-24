@@ -1,0 +1,81 @@
+
+TRUNCATE TABLE [AetnaClaims].[datamart].[CurrentMemberEligibility] 
+
+INSERT INTO [AetnaClaims].[datamart].[CurrentMemberEligibility] 
+SELECT [member_id],
+    [eff_mm],
+	eff_dt as effectiveDate,
+    [last_nm],
+    [first_nm],
+    [suffix_nm],
+    [mbr_gender_cd],
+    [birth_dt],
+    [address_line_1_txt],
+    [address_line_2_txt],
+    [city_nm],
+    [state_postal_cd],
+    [zip_cd],
+    [phone_number],
+    [src_member_id],
+    [mbr_rtp_type_cd],
+    [product_ln_cd],
+    [last_nm2],
+    [first_nm2],
+    [gender_cd],
+    [county_cd2],
+    [product_ln_cd2],
+    [orig_covg_eff_dt],
+    [tax_id_nbr],
+    [pcp_prvdr_id],
+    [print_nm],
+    [address_line_1_txt2],
+    [address_line_2_txt2],
+    [city_nm2],
+    [state_postal_cd2],
+    [zip_cd2],
+    [npi_nbr],
+    [SPECIALTY_CTG_CD],
+    [org_id],
+    [first_vst_dt],
+    [last_vst_dt],
+    [visit_nbr],
+    [tax_id_nbr2],
+    [attr_prvdr_id],
+    [print_nm2],
+    [address_line_1_txt3],
+    [address_line_2_txt3],
+    [city_nm3],
+    [state_postal_cd3],
+    [zip_cd3],
+    [npi_nbr2],
+    [SPECIALTY_CTG_CD2],
+    [STATUS_IND],
+    CONVERT(varchar(10), [eff_dt], 120) AS [eff_dt], -- CCYY-MM-DD format
+    [cncl_dt],
+    [SRC_CUMB_ID],
+    [SRC_CUMB_ID2],
+    [middle_nm],
+    [individual_id],
+    [pulse_fsi_score],
+    [ERG_Prospective_Score],
+    [ERG_Retro_Score],
+    [aetna_card_number],
+    [grp_cntl_name],
+    [currect_record_indicator],
+    [cumb_id_seq_no],
+    [filler],
+    [derived],
+    [attprv_USE_SOURCE],
+    [ia_fncl_risk_cd],
+    [ORG_ID2],
+    [PLAN_ID],
+    [carrier_ind]
+--INTO [AetnaClaims].[datamart].[CurrentMemberEligibility] 
+FROM [AetnaClaims].[fact].[MemberEligibility]
+WHERE CAST([eff_dt] AS DATE) >= CAST(DATEADD(MONTH, -36, GETDATE()) AS DATE)
+AND CAST([eff_dt] AS DATE) <= CAST(GETDATE() AS DATE)
+  AND [STATUS_IND] = 'A'
+  AND [currect_record_indicator] = 'Y'
+Order by eff_dt desc
+
+

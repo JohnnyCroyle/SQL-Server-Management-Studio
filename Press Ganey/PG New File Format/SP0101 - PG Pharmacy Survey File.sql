@@ -108,6 +108,7 @@ SELECT
 				dep.DepartmentKey,
                 dep.DepartmentEpicId,
 				dep.DepartmentName,
+				'' as PharmacyType,
 				dep.IsBed,
 				dep.RoomName,
 				dep.BedName,
@@ -224,14 +225,15 @@ SELECT DISTINCT
         WHEN inpat.BirthDate IS NULL THEN NULL 
         ELSE FORMAT(inpat.BirthDate, 'MMddyyyy') 
     END, -- Format the date to MMddyyyy
-    --[Language] = ISNULL(PG_Lang_Code.PG_Code,'99'),
-	[Language] = '99',
+    [Language] = ISNULL(PG_Lang_Code.PG_Code,'99'),
+	--[Language] = '99',
     [Medical Record Number] = inpat.EnterpriseId,
     [Unique ID] = inpat.EncounterKey,
     [Location Code] = inpat.LocationEpicId,
     [Location Name] = inpat.LocationName,
     [Department Code] = inpat.DepartmentEpicId,
     [Department Name] = inpat.DepartmentName,
+	[PharmacyType] = inpat.PharmacyType,
     [Attending Physician NPI] = inpat.Npi,
     [Attending Physician Name] = inpat.ProviderName,
     [Provider Type] = inpat.ProviderType,
@@ -292,26 +294,26 @@ INTO #PressGaneyFile FROM Patients inpat
 	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON inpat.PatientDurableKey = mn.PatientDurableKey AND mn.rn = 1
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
-	--LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
+	LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
 WHERE loc.PressGaneyId IS NOT NULL 
 
 
 
+Select * from #PressGaneyFile
 
 
 
 
 
+begin
+	delete from #PressGaneyFile
+	where [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
 
---begin
---	delete from #PressGaneyFile
---	where [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
-
----- track the records that being sent this time
---	insert into [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID])
---	select @file_type, [Unique ID] from #PressGaneyFile
---end
+-- track the records that being sent this time
+	insert into [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID])
+	select @file_type, [Unique ID] from #PressGaneyFile
+end
 
 
 ---- Output
@@ -322,11 +324,12 @@ SELECT *, @ProcName as CreatedBy, getdate()as CreatedDate FROM #PressGaneyFile
 
 Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
 
+-- restart process
+--Delete from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+TRUNCATE TABLE [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+--	Delete   from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
+--	Select * from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
 
---	--Delete from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile_NFF]
---	Select *  from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
-
-	--Delete from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where file_type = 'SP0101'
 
 
 	--Select * from  [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
