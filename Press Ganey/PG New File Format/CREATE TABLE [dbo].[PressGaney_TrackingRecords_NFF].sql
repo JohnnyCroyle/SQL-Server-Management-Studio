@@ -13,14 +13,25 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE TABLE [dbo].[PressGaney_TrackingRecords_NFF](
-	[file_type] [varchar](20) NULL,
-	[unique_ID] [int] NULL,
-	[created_date] [datetime] NULL
-) ON [PRIMARY]
-GO
+--CREATE TABLE [dbo].[PressGaney_TrackingRecords_NFF](
+--	[file_type] [varchar](20) NULL,
+--	[unique_ID] [int] NULL,
+--	[created_date] [datetime] NULL
+--) ON [PRIMARY]
+--GO
 
-ALTER TABLE [dbo].[PressGaney_TrackingRecords_NFF] ADD  CONSTRAINT [DF_PressGaney_TrackingRecords_NFF_created_date]  DEFAULT (getdate()) FOR [created_date]
-GO
+
+CREATE TABLE dbo.PressGaney_TrackingRecords_NFF (
+	[unique_ID] [int] NULL,
+    [PatientID] VARCHAR(50),
+    [EncounterDate] varchar(10),
+    [SurveySentDate] DATE,
+	[file_type] [varchar](20) NULL,
+    [Priority] INT,
+    [created_date] DATETIME DEFAULT GETDATE()
+) ON [PRIMARY]
+
+--ALTER TABLE [dbo].[PressGaney_TrackingRecords_NFF] ADD  CONSTRAINT [DF_PressGaney_TrackingRecords_NFF_created_date]  DEFAULT (getdate()) FOR [created_date]
+--GO
 
 

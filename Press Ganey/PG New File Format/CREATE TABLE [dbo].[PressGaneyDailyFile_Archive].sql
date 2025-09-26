@@ -1,17 +1,19 @@
 USE [ETLProcedureRepository]
 GO
 
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[PressGaneyDailyFile]') AND type in (N'U'))
-DROP TABLE [dbo].[PressGaneyDailyFile]
+/****** Object:  Table [dbo].[PressGaneyDailyFile_Archive]    Script Date: 9/26/2025 1:03:42 PM ******/
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[PressGaneyDailyFile_Archive]') AND type in (N'U'))
+DROP TABLE [dbo].[PressGaneyDailyFile_Archive]
 GO
 
+/****** Object:  Table [dbo].[PressGaneyDailyFile_Archive]    Script Date: 9/26/2025 1:03:42 PM ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE TABLE [dbo].[PressGaneyDailyFile](
+CREATE TABLE [dbo].[PressGaneyDailyFile_Archive](
 	[Survey Designator] [nvarchar](255) NULL,
 	[Client ID] [nvarchar](255) NULL,
 	[Last Name] [nvarchar](255) NULL,
@@ -79,7 +81,8 @@ CREATE TABLE [dbo].[PressGaneyDailyFile](
 	[Pharmacy Type] [nvarchar](255) NULL,
 	[ICU] [nvarchar](255) NULL,
 	[EOR] [nvarchar](255) NULL,
-	[CreatedBy] [nvarchar](255) NULL,
-	[CreatedDate] DATETIME NULL DEFAULT (GETDATE())
+	[SentStatus] [nvarchar](10) NULL
 ) ON [PRIMARY]
 GO
+
+

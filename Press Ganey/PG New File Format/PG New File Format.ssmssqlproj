@@ -31,6 +31,12 @@
     </LogicalFolder>
     <LogicalFolder Name="Queries" Type="0" Sorted="true">
       <Items>
+        <FileNode Name="Complete Final Process.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>Complete Final Process.sql</FullPath>
+        </FileNode>
         <FileNode Name="Control to call Stored Procs.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
@@ -49,9 +55,15 @@
           <AssociatedConnUserName />
           <FullPath>CREATE PROCEDURE [dbo].[sp_PressGaney_SP0101_Pharmacy].sql</FullPath>
         </FileNode>
+        <FileNode Name="CREATE PROCEDURE dbo.sp_PressGaneyExecuteSurveyDataLoaders.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE PROCEDURE dbo.sp_PressGaneyExecuteSurveyDataLoaders.sql</FullPath>
+        </FileNode>
         <FileNode Name="CREATE TABLE [dbo].[PG_Survey_Language_Codes] AND INSERTS.sql">
-          <AssociatedConnectionMoniker />
-          <AssociatedConnSrvName />
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
           <AssociatedConnUserName />
           <FullPath>CREATE TABLE [dbo].[PG_Survey_Language_Codes] AND INSERTS.sql</FullPath>
         </FileNode>
@@ -73,11 +85,41 @@
           <AssociatedConnUserName />
           <FullPath>CREATE TABLE [dbo].[PressGaneyDailyFile].sql</FullPath>
         </FileNode>
+        <FileNode Name="CREATE TABLE [dbo].[PressGaneyDailyFile_Archive].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE TABLE [dbo].[PressGaneyDailyFile_Archive].sql</FullPath>
+        </FileNode>
+        <FileNode Name="CREATE TABLE [dbo].[PressGaneySurveyDataLoadLog].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE TABLE [dbo].[PressGaneySurveyDataLoadLog].sql</FullPath>
+        </FileNode>
+        <FileNode Name="CREATE TABLE [dbo].[PressGaneySurveyDataLoadProcedures].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE TABLE [dbo].[PressGaneySurveyDataLoadProcedures].sql</FullPath>
+        </FileNode>
+        <FileNode Name="CREATE TABLE [dbo].[PressGaneySurveyTypePriority].sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>CREATE TABLE [dbo].[PressGaneySurveyTypePriority].sql</FullPath>
+        </FileNode>
         <FileNode Name="DROP TABLE TO CREATE [dbo].[PressGaneySurveyMap] AND INSERT DATA.sql">
           <AssociatedConnectionMoniker />
           <AssociatedConnSrvName />
           <AssociatedConnUserName />
           <FullPath>DROP TABLE TO CREATE [dbo].[PressGaneySurveyMap] AND INSERT DATA.sql</FullPath>
+        </FileNode>
+        <FileNode Name="INSERT Stored Procs records PressGaneySurveyDataLoadProcedures.sql">
+          <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:COGITORPTUAT:True</AssociatedConnectionMoniker>
+          <AssociatedConnSrvName>COGITORPTUAT</AssociatedConnSrvName>
+          <AssociatedConnUserName />
+          <FullPath>INSERT Stored Procs records PressGaneySurveyDataLoadProcedures.sql</FullPath>
         </FileNode>
         <FileNode Name="NICU - Patient Select.sql">
           <AssociatedConnectionMoniker />

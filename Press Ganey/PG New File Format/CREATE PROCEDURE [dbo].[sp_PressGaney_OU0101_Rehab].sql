@@ -22,9 +22,20 @@ GO
 ------ Added Mobile Number to the file. 8/22/2025  
 ------ Added CPT codes to the file. 8/22/2025
 ------ Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
+------
+------ This procedure extracts patient encounter data for rehabilitation services,
+------ including demographic, provider, department, and visit details.
+------ It applies Press Ganey formatting rules for race, ethnicity, and language.
+------ Mobile numbers and up to six CPT procedure codes are included per encounter.
+------ The procedure ensures only new records are sent by tracking unique IDs.
+------ Output is inserted into the Press Ganey daily file table for downstream processing.
+------ Error handling is implemented to log issues and rethrow exceptions.
+------ Please update survey designator and address fields as needed for future file format changes.
+------ For questions or updates, contact Johnny Croyle.
+------ =============================================*/
 
 ------ =============================================*/
-CREATE PROCEDURE [dbo].[sp_PressGaney_OU0101_Rehab] 
+ALTER PROCEDURE [dbo].[sp_PressGaney_OU0101_Rehab] 
 	@StartDate varchar(10),
 	@EndDate varchar(10)
 
@@ -284,6 +295,8 @@ BEGIN TRY
 		[State Regulation Flag] = 'N',
 		[Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
 		[Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.ProviderType = 'Surgery'  THEN 'Y' ELSE 'N' END,
+		[PharmacyType] = '',
+		[ICU] = '',
 		'$' EOR
 	INTO #PressGaneyFile FROM PatientEncounters inpat 
 		LEFT JOIN CDW_report.FullAccess.DrgDim drg ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
@@ -296,7 +309,6 @@ BEGIN TRY
 		LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
 		LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
-	WHERE loc.PressGaneyId IS NOT NULL 
 
 
 
@@ -306,8 +318,8 @@ BEGIN
 	WHERE [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
 
 -- track the records that being sent this time
-	INSERT INTO [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID])
-	SELECT @file_type, [Unique ID] FROM #PressGaneyFile
+	INSERT INTO [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID],[PatientID],[EncounterDate])
+	SELECT @file_type, [Unique ID],[Medical Record Number],[Visit or Admit Date] FROM #PressGaneyFile
 
 	--Adds to Press Ganey Daily File Bucket
 	INSERT INTO [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]

@@ -48,6 +48,7 @@ SELECT
 	--@EndDateInt = 20250821;
 
 
+
 		if (@StartDate is null)
 			set @StartDate = 't-30'
 		if (@EndDate is null)
@@ -108,7 +109,6 @@ SELECT
 				dep.DepartmentKey,
                 dep.DepartmentEpicId,
 				dep.DepartmentName,
-				'' as PharmacyType,
 				dep.IsBed,
 				dep.RoomName,
 				dep.BedName,
@@ -176,9 +176,30 @@ SELECT
                 order by ROW_NUMBER() over (partition by pat.PatientDurableKey order by pat.PatientKey)
             ) t
             group by PatientDurableKey, PatientKey
+        ),
+
+        PharmacyType as (
+
+				SELECT top 1 with ties
+					PAT_ID,
+					PAT_FLAG_TYPE_C,
+					ACCT_NOTE_INSTANT,
+					CASE 
+					WHEN PAT_FLAG_TYPE_C = 2028 THEN 'Home Delivery'
+					WHEN PAT_FLAG_TYPE_C IN (2012, 2025) THEN 'Specialty Pharmacy'
+				ELSE NULL
+                END AS PharmacyType
+				FROM Patients as p
+					INNER JOIN [CLARITY].[dbo].[PATIENT] AS pat WITH (NOLOCK) ON p.PatientEpicId = pat.PAT_ID
+					INNER JOIN [CLARITY].[dbo].[PATIENT_FYI_FLAGS] as flags with (nolock) ON PAT_ID =??pat.PAT_ID          
+				WHERE PAT_FLAG_TYPE_C IN (2012,2025,2028) AND ACTIVE_C = 1
+				order by  ROW_NUMBER() over (partition by PAT_ID order by ACCT_NOTE_INSTANT desc)
+
         )
         
 
+
+--Select * from PharmacyType
 
 -- Select the required fields and format them as per the new Press Ganey file format
 -- Ensure to handle NULL values and format dates correctly
@@ -233,7 +254,6 @@ SELECT DISTINCT
     [Location Name] = inpat.LocationName,
     [Department Code] = inpat.DepartmentEpicId,
     [Department Name] = inpat.DepartmentName,
-	[PharmacyType] = inpat.PharmacyType,
     [Attending Physician NPI] = inpat.Npi,
     [Attending Physician Name] = inpat.ProviderName,
     [Provider Type] = inpat.ProviderType,
@@ -284,6 +304,8 @@ SELECT DISTINCT
     [State Regulation Flag] = 'N',
     [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
     [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.ProviderType = 'Surgery'  THEN 'Y' ELSE 'N' END,
+    [PharmacyType] = pharm.PharmacyType,
+	[ICU] = '',
     '$' EOR
 INTO #PressGaneyFile FROM Patients inpat 
 	LEFT JOIN CDW_report.FullAccess.DrgDim drg ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
@@ -294,9 +316,10 @@ INTO #PressGaneyFile FROM Patients inpat
 	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON inpat.PatientDurableKey = mn.PatientDurableKey AND mn.rn = 1
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
+	LEFT JOIN PharmacyType pharm on inpat.PatientEpicId = pharm.PAT_ID
 	LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
-WHERE loc.PressGaneyId IS NOT NULL 
+
 
 
 
@@ -306,29 +329,29 @@ Select * from #PressGaneyFile
 
 
 
-begin
-	delete from #PressGaneyFile
-	where [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
+--begin
+--	delete from #PressGaneyFile
+--	where [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
 
--- track the records that being sent this time
-	insert into [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID])
-	select @file_type, [Unique ID] from #PressGaneyFile
-end
-
-
----- Output
-INSERT INTO [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-SELECT *, @ProcName as CreatedBy, getdate()as CreatedDate FROM #PressGaneyFile
+---- track the records that being sent this time
+--	insert into [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID])
+--	select @file_type, [Unique ID] from #PressGaneyFile
+--end
 
 
+------ Output
+--INSERT INTO [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+--SELECT *, @ProcName as CreatedBy, getdate()as CreatedDate FROM #PressGaneyFile
 
-Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
 
--- restart process
---Delete from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-TRUNCATE TABLE [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
---	Delete   from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
---	Select * from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
+
+--Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+
+---- restart process
+----Delete from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+--TRUNCATE TABLE [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+----	Delete   from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
+----	Select * from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
 
 
 

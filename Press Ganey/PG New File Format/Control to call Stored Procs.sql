@@ -1,31 +1,29 @@
 USE [ETLProcedureRepository]
 GO
 
--- This is just to test calling procs and will be include in the process
+DECLARE	@return_value int
 
---Clear bucket table
-Delete from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+EXEC	@return_value = [dbo].[sp_PressGaneyExecuteSurveyDataLoaders]
+		@StartDate = N'01/01/2025',
+		@EndDate = N'01/14/2025'
 
-DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/07/2025';
-
-
-EXEC	[ETLProcedureRepository].[dbo].[sp_PressGaney_SP0101_Pharmacy]
-		@StartDate =@StartDate,
-		@EndDate = @EndDate
-
-
-EXEC	[dbo].[sp_PressGaney_OU0101_Rehab]
-		@StartDate =@StartDate,
-		@EndDate = @EndDate
-
+SELECT	'Return Value' = @return_value
 
 GO
 
 
-Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-Select * from  [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF
 
 
+--Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+--Select * from  [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF
+
+
+Select * from dbo.PressGaneyDailyFile_Archive order by [Last Name]
+
+Select * from [dbo].[PressGaneySurveyDataLoadLog] order by execution_time desc
+
+--Delete from [dbo].[PressGaneySurveyDataLoadLog] 
 --Delete from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
 --Delete from [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF
+
+

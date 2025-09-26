@@ -1,0 +1,14 @@
+SELECT top 1 with ties
+	PAT_ID,
+	PAT_FLAG_TYPE_C,
+	ACCT_NOTE_INSTANT,
+					CASE 
+	WHEN PAT_FLAG_TYPE_C = 2028 THEN 'Home Delivery'
+	WHEN PAT_FLAG_TYPE_C IN (2012, 2025) THEN 'Specialty Pharmacy'
+ELSE NULL
+                END AS PharmacyType
+FROM [CLARITY].[dbo].[PATIENT] AS pat WITH (NOLOCK)
+INNER JOIN [CLARITY].[dbo].[PATIENT_FYI_FLAGS] as flags with (nolock) ON PAT_ID =  pat.PAT_ID          
+WHERE PAT_FLAG_TYPE_C IN (2012,2025,2028) AND ACTIVE_C = 1
+                and PAT_ID in('Z1149140','Z4317434','Z425772','Z170584','Z396481','Z3572415','Z529245','Z756187','Z4220250')
+order by  ROW_NUMBER() over (partition by PAT_ID order by ACCT_NOTE_INSTANT desc)
