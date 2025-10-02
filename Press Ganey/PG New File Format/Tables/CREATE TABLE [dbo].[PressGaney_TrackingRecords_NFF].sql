@@ -23,8 +23,8 @@ GO
 
 CREATE TABLE dbo.PressGaney_TrackingRecords_NFF (
 	[unique_ID] [int] NULL,
-    [PatientID] VARCHAR(50),
-    [EncounterDate] varchar(10),
+    [PatientEnterpriseID] VARCHAR(50),
+    [ServiceDate] varchar(10),
     [SurveySentDate] DATE,
 	[file_type] [varchar](20) NULL,
     [Priority] INT,

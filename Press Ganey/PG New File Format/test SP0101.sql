@@ -1,44 +1,46 @@
-USE [ETLProcedureRepository]
-GO
-/****** Object:  StoredProcedure [dbo].[sp_PressGaney_Pharmacy_Survey]    Script Date: 9/10/2025 9:42:10 AM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
+﻿USE [ETLProcedureRepository]
 GO
 
+IF OBJECT_ID('tempdb..#PressGaneyFile') IS NOT NULL
+DROP TABLE #PressGaneyFile;
 
-/*-- =============================================
------- Author:		Johnny Croyle
------- Create date: 9/12/2025
------- Description:	get dataset for Press Ganey's Phama Survey
-
------- =============================================*/
-
-CREATE PROCEDURE [dbo].[sp_PressGaney_Pharmacy_Survey] 
-	@StartDate varchar(10)
-	,@EndDate varchar(10)
-	,@update int = 0
-AS
-
-BEGIN TRY
-	SET NOCOUNT ON;
-
-
-
-DECLARE 
-
-
+DECLARE @StartDate VARCHAR(10) = '01/01/2025',
+        @EndDate   VARCHAR(10) = '01/31/2025',
         @StartDateInt BIGINT,
-        @EndDateInt   BIGINT,
-		@errmsg	varchar(255);
+        @EndDateInt   BIGINT;
 
 SELECT 
-	--@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
- --   @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
+	@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
+    @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
 
 
-	@StartDateInt =  20250821,
-	@EndDateInt = 20250821;
+
+	declare 
+			@file_type	  varchar(10) = 'SP0101',
+			@maxD		  datetime, 
+			@selfCorrectDate	int,
+			@tmpDate			date,
+			@errmsg			varchar(255),
+			@ProcName		varchar(255)
+
+		-- retrieve sp name for created by		
+		SET @ProcName = OBJECT_NAME(@@PROCID);
+
+
+		if (@StartDate is null)
+			set @StartDate = 't-30'
+		if (@EndDate is null)
+			set @EndDate = 't'   
+
+		-- self-corrected lookback date for DR purpose
+		select @maxD = max(created_date) from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where file_type = @file_type
+		select @selfCorrectDate = datediff(dd, @maxD, getdate())
+		if (@maxD < DATEADD(dd, - 9, getdate()))
+			select @StartDate = 't - ' + cast((30 + @selfCorrectDate) as varchar(2))  			
+		
+		select	@StartDateInt  = cast(format([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') as bigint)
+				, @EndDateInt  = cast(format([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') as bigint)
+	
 
 
 -- Select patient encounters for the specified date range and service area
@@ -46,7 +48,7 @@ SELECT
 -- This will be the driver for the data we need to pull
 -- We will use a CTE to get the patient encounters and then join with other tables as needed
    
-        ;WITH PatientEncounters AS (
+        ;WITH Patients AS (
 			SELECT DISTINCT
 				dep.DepartmentSpecialty,
 				pat.PatientEpicId,
@@ -88,7 +90,7 @@ SELECT
 				dep.RoomName,
 				dep.BedName,
 				dep.ServiceAreaEpicId,
-                meds.EncounterKey,
+                meds.MedicationDispenseKey as EncounterKey, -- this is not encounter key but I need a Prim key for tracking
 				meds.PatientDurableKey,
 				meds.PatientKey,
                 NULL as AdmissionSource,
@@ -96,40 +98,36 @@ SELECT
                 NULL as PatientClass,
 				NULL as AdmissionTimeOfDayKey,
 				NULL as DischargeTimeOfDayKey,
-				NULL as AdmissionDateKey,
+				DispensePreparedDateKey as AdmissionDateKey,
+				DispensePreparedUtcInstant as EventDateTime,
 			    NULL as DischargeDateKey,
 				NULL as DischargeProviderDurableKey,
 				NULL as AdmissionSourceCode,
 				NULL as DischargeDispositionCode,
 				NULL as DiagnosisComboKey,
 				NULL as PrimaryDiagnosisKey,
-				DispenseReceivedDateKey as DateKey  --This date is of the start of the encounter, visit, etc
-
-
-            FROM CDW_report.FullAccess.MedicationDispenseFact as meds
-
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON meds.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
-				INNER JOIN CDW_report.FullAccess.MedicationOrderFact as medorder ON  medorder.MedicationOrderKey = meds.MedicationOrderKey 
+				DispensePreparedDateKey as DateKey  --This date is of the start of the encounter, visit, etc
+            FROM CDW_report.FullAccess.MedicationDispenseFact as meds WITH (NOLOCK)
+				INNER JOIN CDW_Report.FullAccess.PatientDim pat WITH (NOLOCK) ON meds.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
+				LEFT JOIN CDW_report.FullAccess.MedicationOrderFact as medorder WITH (NOLOCK) ON  medorder.MedicationOrderKey = meds.MedicationOrderKey 
 																		AND  medorder.SentToPharmacyKey = meds.DispensePharmacyKey 
 																		AND medorder.PatientDurableKey = pat.DurableKey 
-				
 				LEFT JOIN CDW_report.FullAccess.ProviderDim prov ON  prov.ProviderKey = medorder.OrderedByProviderKey 
-				LEFT JOIN CDW_report.FullAccess.EncounterFact as en ON en.EncounterKey = meds.EncounterKey
-                --LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON meds.PatientDurableKey = bill.PatientDurableKey
 				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON meds.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
             WHERE 
-			meds.DispenseReceivedDateKey BETWEEN @StartDateInt AND @EndDateInt
+			meds.DispensePreparedDateKey BETWEEN @StartDateInt AND @EndDateInt
 			AND meds.Mode =  'Outpatient'
+			AND FillStatus = 'Dispensed'
         ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
                 p.DurableKey AS PatientDurableKey,
                 ph.OTHER_COMMUNIC_NUM,
                 ROW_NUMBER() OVER (PARTITION BY p.DurableKey ORDER BY ph.CONTACT_PRIORITY) AS rn
-            FROM PatientEncounters p
+            FROM Patients p
 				INNER JOIN CLARITY.dbo.OTHER_COMMUNCTN ph WITH (NOLOCK)
 					ON p.PatientEpicId = ph.PAT_ID
-					AND ph.OTHER_COMMUNIC_C = 1
+					AND ph.OTHER_COMMUNIC_C = 1  AND ph.CONTACT_PRIORITY = 1
         ),
 		        -- Crosstab each surgery case into 6 procedure using a CTE
                 -- This will allow us to have a fixed number of columns for the CPT codes
@@ -147,7 +145,7 @@ SELECT
                     pat.PatientKey, 
                     coalesce(pro.CptCode, pro.Code) as Cpt,
                     ROW_NUMBER() over (partition by pat.PatientDurableKey order by pro.ProcedureKey) as rn
-                from PatientEncounters pat
+                from Patients pat
                 inner join CDW_report.FullAccess.ProcedureBridge pro with (nolock) 
                     on pat.DiagnosisComboKey = pro.ProcedureComboKey
 					where CptCode between '10004' and '69990' or CptCode between '93451' AND '93462' or CptCode between '93566' and '93572'
@@ -156,8 +154,34 @@ SELECT
                 order by ROW_NUMBER() over (partition by pat.PatientDurableKey order by pat.PatientKey)
             ) t
             group by PatientDurableKey, PatientKey
+        ),
+
+        PharmacyType as (
+
+				SELECT top 1 with ties
+					PAT_ID,
+					PAT_FLAG_TYPE_C,
+					ACCT_NOTE_INSTANT,
+					CASE 
+					WHEN PAT_FLAG_TYPE_C = 2028 THEN 'Home Delivery'
+					WHEN PAT_FLAG_TYPE_C IN (2012, 2025) THEN 'Specialty Pharmacy'
+				ELSE NULL
+                END AS PharmacyType
+				FROM Patients as p
+					INNER JOIN [CLARITY].[dbo].[PATIENT] AS pat WITH (NOLOCK) ON p.PatientEpicId = pat.PAT_ID
+					INNER JOIN [CLARITY].[dbo].[PATIENT_FYI_FLAGS] as flags WITH (NOLOCK) ON PAT_ID =  pat.PAT_ID          
+				WHERE PAT_FLAG_TYPE_C IN (2012,2025,2028) AND ACTIVE_C = 1
+				order by  ROW_NUMBER() over (partition by PAT_ID order by ACCT_NOTE_INSTANT desc)
+
         )
         
+
+
+--Select * from PharmacyType
+
+
+
+
 
 
 -- Select the required fields and format them as per the new Press Ganey file format
@@ -177,8 +201,8 @@ SELECT DISTINCT
     [Telephone Number] = inpat.HomePhoneNumber,
     [Mobile Number] = ISNULL(mn.OTHER_COMMUNIC_NUM,'') ,
     [MS-DRG] = ISNULL(drg.Code,''),
-    -- '1' = Male, '2' = Female, 'U' = Unknown/Other
-    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'U' END,
+    -- '1' = Male, '2' = Female, 'M' = Unknown/Other
+    [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
     [Race] = 
         CASE 
             WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
@@ -205,8 +229,8 @@ SELECT DISTINCT
         WHEN inpat.BirthDate IS NULL THEN NULL 
         ELSE FORMAT(inpat.BirthDate, 'MMddyyyy') 
     END, -- Format the date to MMddyyyy
-    --[Language] = ISNULL(PG_Lang_Code.PG_Code,'99'),
-	[Language] = '99',
+    [Language] = ISNULL(PG_Lang_Code.PG_Code,'99'),
+	--[Language] = '99',
     [Medical Record Number] = inpat.EnterpriseId,
     [Unique ID] = inpat.EncounterKey,
     [Location Code] = inpat.LocationEpicId,
@@ -263,29 +287,46 @@ SELECT DISTINCT
     [State Regulation Flag] = 'N',
     [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
     [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.ProviderType = 'Surgery'  THEN 'Y' ELSE 'N' END,
-    '$' EOR
-FROM PatientEncounters inpat 
-	LEFT JOIN CDW_report.FullAccess.DrgDim drg ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
-	LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia  ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
-	LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
-	LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc ON inpat.DepartmentKey = loc.DepartmentKey
-	LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
-	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
+    [PharmacyType] = pharm.PharmacyType,
+	[ICU] = '',
+    '$' EOR,
+	inpat.EventDateTime
+INTO #PressGaneyFile FROM Patients inpat 
+	LEFT JOIN CDW_report.FullAccess.DrgDim drg WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
+	LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia WITH (NOLOCK)  ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
+	LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm WITH (NOLOCK) ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
+	LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc WITH (NOLOCK) ON inpat.DepartmentKey = loc.DepartmentKey
+	LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha WITH (NOLOCK) ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
+	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq WITH (NOLOCK) ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON inpat.PatientDurableKey = mn.PatientDurableKey AND mn.rn = 1
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
-	--LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
-
-WHERE loc.PressGaneyId IS NOT NULL 
-
+	LEFT JOIN PharmacyType pharm on inpat.PatientEpicId = pharm.PAT_ID
+	LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes] as PG_Lang_Code WITH (NOLOCK) ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
 
 
+BEGIN
+	DELETE FROM #PressGaneyFile
+	WHERE [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
+
+-- track the records that being sent this time
+	INSERT INTO [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID],[PatientID],[EncounterDate])
+	SELECT @file_type, [Unique ID],[Medical Record Number],[Visit or Admit Date] FROM #PressGaneyFile
+
+	--Adds to Press Ganey Daily File Bucket
+	INSERT INTO [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+	SELECT *, @ProcName as CreatedBy, getdate()as CreatedDate FROM #PressGaneyFile
+
+END
 
 
-END TRY
-BEGIN CATCH
-	EXEC [ETLProcedureRepository].[dbo].[sp_logErrorInfo] 'sp_PressGaney_Rehab_Survey' ;
-	THROW;
-END CATCH
+-- Output
+Select * from #PressGaneyFile
+--Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+
+
+
+
+
 
 

@@ -70,6 +70,7 @@ SELECT
 				NULL as DischargeDispositionCode,
 				NULL as DiagnosisComboKey,
 				NULL as PrimaryDiagnosisKey,
+				DispensePreparedUtcInstant,
 				DispensePreparedDateKey as DateKey  --This date is of the start of the encounter, visit, etc
             FROM CDW_report.FullAccess.MedicationDispenseFact as meds
 				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON meds.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current

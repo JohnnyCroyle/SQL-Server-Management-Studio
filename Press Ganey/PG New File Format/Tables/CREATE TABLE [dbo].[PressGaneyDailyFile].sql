@@ -1,19 +1,17 @@
 USE [ETLProcedureRepository]
 GO
 
-/****** Object:  Table [dbo].[PressGaneyDailyFile_Archive]    Script Date: 9/26/2025 1:03:42 PM ******/
-IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[PressGaneyDailyFile_Archive]') AND type in (N'U'))
-DROP TABLE [dbo].[PressGaneyDailyFile_Archive]
+IF  EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[PressGaneyDailyFile]') AND type in (N'U'))
+DROP TABLE [dbo].[PressGaneyDailyFile]
 GO
 
-/****** Object:  Table [dbo].[PressGaneyDailyFile_Archive]    Script Date: 9/26/2025 1:03:42 PM ******/
 SET ANSI_NULLS ON
 GO
 
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE TABLE [dbo].[PressGaneyDailyFile_Archive](
+CREATE TABLE [dbo].[PressGaneyDailyFile](
 	[Survey Designator] [nvarchar](255) NULL,
 	[Client ID] [nvarchar](255) NULL,
 	[Last Name] [nvarchar](255) NULL,
@@ -80,9 +78,10 @@ CREATE TABLE [dbo].[PressGaneyDailyFile_Archive](
 	[Transferred/admitted to inpatient] [nvarchar](255) NULL,
 	[Pharmacy Type] [nvarchar](255) NULL,
 	[ICU] [nvarchar](255) NULL,
+	[Virtual Nursing] [nvarchar](255) NULL,
 	[EOR] [nvarchar](255) NULL,
-	[SentStatus] [nvarchar](10) NULL
+	[EventCreatedDate] DATETIME NULL, 
+	[CreatedBy] [nvarchar](255) NULL,
+	[CreatedDate] DATETIME NULL DEFAULT (GETDATE())
 ) ON [PRIMARY]
 GO
-
-

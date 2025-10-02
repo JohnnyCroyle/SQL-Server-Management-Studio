@@ -32,6 +32,8 @@ BEGIN
     DECLARE @proc_name NVARCHAR(255);
     DECLARE @sql NVARCHAR(MAX);
     DECLARE @error NVARCHAR(MAX);
+	DECLARE @startTime DATETIME;
+	DECLARE @endTime DATETIME;
 
     DECLARE proc_cursor CURSOR FOR
     SELECT proc_name
@@ -44,6 +46,7 @@ BEGIN
     WHILE @@FETCH_STATUS = 0
     BEGIN
         BEGIN TRY
+			SET @startTime = GETDATE();  -- Capture start time
             SET @sql = 'EXEC ' + QUOTENAME(@proc_name) + 
                        ' @StartDate = @p1, @EndDate = @p2';
             EXEC sp_executesql @sql, 
@@ -51,14 +54,22 @@ BEGIN
                 @p1 = @StartDate, 
                 @p2 = @EndDate;
 
-            INSERT INTO dbo.PressGaneySurveyDataLoadLog (proc_name, status)
-            VALUES (@proc_name, 'Success');
+			SET @endTime = GETDATE();  -- Capture end time
+
+            INSERT INTO dbo.PressGaneySurveyDataLoadLog (proc_name, start_date,end_date,start_execution_time, end_execution_time,status)
+            VALUES (@proc_name, @StartDate, @EndDate,@startTime,@endTime,  'Success');
         END TRY
         BEGIN CATCH
+			SET @endTime = GETDATE();  -- Still capture end time on failure
             SET @error = ERROR_MESSAGE();
 
-            INSERT INTO dbo.PressGaneySurveyDataLoadLog (proc_name, status, error_message)
-            VALUES (@proc_name, 'Failure', @error);
+            INSERT INTO dbo.PressGaneySurveyDataLoadLog (proc_name, start_date,end_date,start_execution_time, end_execution_time,status,error_message)
+            VALUES (@proc_name, @StartDate, @EndDate,@startTime,@endTime,  'Failure',@error);
+
+
+            -- Re-throw the error to propagate it to SSIS
+            THROW;
+
         END CATCH;
 
         FETCH NEXT FROM proc_cursor INTO @proc_name;
@@ -66,4 +77,12 @@ BEGIN
 
     CLOSE proc_cursor;
     DEALLOCATE proc_cursor;
+
+    -- Clean up old log entries older than 6 months
+    -- This helps maintain the size of the log table and keeps it manageable
+	DELETE FROM dbo.PressGaneySurveyDataLoadLog
+	WHERE start_execution_time < DATEADD(MONTH, -6, GETDATE());
+
+
 END;
+

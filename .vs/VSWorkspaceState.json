@@ -2,8 +2,10 @@
   "ExpandedNodes": [
     "",
     "\\Press Ganey",
-    "\\Press Ganey\\PG New File Format"
+    "\\Press Ganey\\PG New File Format",
+    "\\Press Ganey\\PG New File Format\\Stored Procs",
+    "\\Press Ganey\\PG New File Format\\Tables"
   ],
-  "SelectedNode": "\\Press Ganey\\PG New File Format\\Rehab - Patient Select.sql",
+  "SelectedNode": "\\Press Ganey\\PG New File Format\\Sent vs Not Sent Status by Matching Unique ID.sql",
   "PreviewInSolutionExplorer": false
 }
