@@ -6,6 +6,6 @@
     "\\Press Ganey\\PG New File Format\\Stored Procs",
     "\\Press Ganey\\PG New File Format\\Tables"
   ],
-  "SelectedNode": "\\Press Ganey\\PG New File Format\\Sent vs Not Sent Status by Matching Unique ID.sql",
+  "SelectedNode": "\\Press Ganey\\PG New File Format\\Tables\\CREATE TABLE [dbo].[PressGaney_TrackingRecords_NFF].sql",
   "PreviewInSolutionExplorer": false
 }

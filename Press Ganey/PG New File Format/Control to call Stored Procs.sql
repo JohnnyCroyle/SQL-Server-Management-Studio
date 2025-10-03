@@ -20,10 +20,21 @@ EXEC sp_PressGaneyExecuteSurveyDataLoaders '01/28/2025', '02/27/2025'
 --1/28/2025	2/27/2025
 
 Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-Select * from  [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF where file_type = 'SP0101' 
+Select * from  [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF where notes is not null and SurveySentDate is not null
 
-Select * from dbo.PressGaneyDailyFile_Archive where [Survey Designator] = 'SP0101' and [Client ID] = ''
-and [Visit or Admit Date] > '01312025'
+Select * from dbo.PressGaneyDailyFile_Archive where [Survey Designator] = 'SP0101' and SentStatus = 'Sent'  ---10219
+
+Select * from PressGaneyFinalSurveyFile where [Medical Record Number] = 'E3760498'  and [Visit or Admit Date] = '03092025' 
+
+
+
+Select * from  [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords] where PatientEnterpriseID = 'E3760498'  and ServiceDate = '09/04/2024'
+
+
+
+
+--and [Client ID] = ''
+--and [Visit or Admit Date] > '01312025'
 
 Select * from [dbo].[PressGaneySurveyDataLoadLog] order by start_execution_time desc
 

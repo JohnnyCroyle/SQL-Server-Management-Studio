@@ -26,9 +26,10 @@ CREATE TABLE dbo.PressGaney_TrackingRecords_NFF (
     [PatientEnterpriseID] VARCHAR(50),
     [ServiceDate] varchar(10),
     [SurveySentDate] DATE,
-	[file_type] [varchar](20) NULL,
+	[file_type] [varchar](50) NULL,
     [Priority] INT,
-    [created_date] DATETIME DEFAULT GETDATE()
+    [created_date] DATETIME DEFAULT GETDATE(),
+    [notes] VARCHAR(255)
 ) ON [PRIMARY]
 
 --ALTER TABLE [dbo].[PressGaney_TrackingRecords_NFF] ADD  CONSTRAINT [DF_PressGaney_TrackingRecords_NFF_created_date]  DEFAULT (getdate()) FOR [created_date]
