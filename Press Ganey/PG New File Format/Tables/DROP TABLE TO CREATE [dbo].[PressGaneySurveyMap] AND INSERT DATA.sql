@@ -13,7 +13,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 CREATE TABLE [dbo].[PressGaneySurveyMap](
-	[PressGaneyClientID] [bigint] NOT NULL,
+	[PressGaneyClientID] [nvarchar](50) NULL,
 	[SurveyDesignator] [nvarchar](50) NULL,
 	[Service] [nvarchar](50) NULL,
 	[DepartmentEpicId] [nvarchar](50) NULL,
