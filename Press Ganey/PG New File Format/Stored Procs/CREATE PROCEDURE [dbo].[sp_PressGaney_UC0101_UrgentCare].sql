@@ -198,8 +198,8 @@ DROP TABLE #PressGaneyFile;
 	-- Select the required fields and format them as per the new Press Ganey file format
 	-- Ensure to handle NULL values and format dates correctly
 	SELECT DISTINCT
-		[Survey Designator] = 'UC0101', --TODO: Update this to the correct survey designator if needed
-		[Client ID] = loc.PressGaneyId,
+		[Survey Designator] = CASE WHEN inpat.AgeInYears >= 18 THEN 'UC0101' ELSE 'UC0101' END,
+		[Client ID] = ISNULL(loc.PressGaneyClientID,'CRAP'),
 		[Last Name] = inpat.LastName,
 		[Middle Initial] =  ISNULL(LEFT(inpat.MiddleName, 1), ''),
 		[First Name] = inpat.FirstName,
@@ -212,11 +212,11 @@ DROP TABLE #PressGaneyFile;
 		[Telephone Number] = inpat.HomePhoneNumber,
 		[Mobile Number] = ISNULL(mn.OTHER_COMMUNIC_NUM,'') ,
 		[MS-DRG] = ISNULL(drg.Code,''),
-		-- '1' = Male, '2' = Female, 'U' = Unknown/Other
+		-- '1' = Male, '2' = Female, 'M' = Unknown/Other
 		[Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
 		[Race] = 
 			CASE 
-				WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
+				WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing','Declined','*Unspecified','*Deleted','*Not Applicable','*Unknown') THEN 'Prefer not to answer'
 				WHEN inpat.FirstRace IN ('American Indian or Alaska Native', 'American Indian/Alaska Native', 'American Indian', 'Alaska Native') THEN 'American Indian or Alaskan Native'
 				WHEN inpat.FirstRace IN ('Asian', 'Asian - Chinese', 'Asian - Indian', 'Asian - Japanese', 'Asian - Korean', 'Asian - Vietnamese', 'Asian - Filipino', 'Asian - Other') THEN 'Asian'
 				WHEN inpat.FirstRace IN ('Black or African American', 'Black/African American', 'Black', 'African American') THEN 'Black or African American'
@@ -224,14 +224,14 @@ DROP TABLE #PressGaneyFile;
 				WHEN inpat.FirstRace IN ('White', 'Caucasian', 'White or Caucasian') THEN 'White or Caucasian'
 				WHEN inpat.FirstRace IN ('Other', 'Other Race') THEN 'Other'
 				-- Handle multiple race using both inpat.FirstRace and inpat.SecondRace
-				WHEN inpat.FirstRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race')
-					 OR inpat.SecondRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race')
+				WHEN inpat.FirstRace IN ('Two or more races', 'Multiple', 'Multiracial', 'Multi Racial', 'More than one race')
+					 OR inpat.SecondRace IN ('Two or more races', 'Multiple', 'Multiracial', 'Multi Racial', 'More than one race')
 					 OR (inpat.SecondRace IS NOT NULL AND inpat.SecondRace <> '' AND inpat.SecondRace <> inpat.FirstRace) THEN 'Two or more races'
 				ELSE inpat.FirstRace
 			END,
 		[Ethnicity] = 
 			CASE 
-				WHEN inpat.Ethnicity IS NULL OR inpat.Ethnicity IN ('', 'Unknown', 'Not Available', 'Missing','Declined') THEN 'Prefer not to answer'
+				WHEN inpat.Ethnicity IS NULL OR inpat.Ethnicity IN ('', 'Unknown', 'Not Available', 'Missing','Declined','*Unspecified','Unknown-Patient Confirmed') THEN 'Prefer not to answer'
 				WHEN inpat.Ethnicity IN ('Hispanic or Latino', 'Hispanic/Latino', 'Hispanic') THEN 'Hispanic/Latino'
 				WHEN inpat.Ethnicity IN ('Not Hispanic or Latino', 'Not Hispanic/Latino', 'Non-Hispanic') THEN 'Not Hispanic/Latino'
 				ELSE inpat.Ethnicity
@@ -260,16 +260,18 @@ DROP TABLE #PressGaneyFile;
 		[Patient Admission Source] = inpat.AdmissionSourceCode,
 		[Visit or Admit Date] = CASE 
 			WHEN inpat.AdmissionDateKey = '-1' THEN '' -- Return blank if -1
+			WHEN inpat.AdmissionDateKey = '-2' THEN '' -- Return blank if -2
 			WHEN inpat.AdmissionDateKey IS NULL THEN '' -- Return blank if NULL
 			ELSE FORMAT(CONVERT(DATE, CAST(inpat.AdmissionDateKey AS CHAR(8)), 112),'MMddyyyy')
 		END, 
-		[Visit or Admit Time] = RIGHT('0000' + CAST(inpat.AdmissionTimeOfDayKey AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
+		--[Visit or Admit Time] = FORMAT(CAST(inpat.EventDateTime AS time), 'HHmm'), -- Ensure time is in HHMM format
+		[Visit or Admit Time] = RIGHT('0000' + CAST(FORMAT(CAST(inpat.EventDateTime AS time),'hhmm') AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
 		[Discharge Date] = CASE 
 			WHEN inpat.DischargeDateKey = '-1' THEN '' -- Return blank if -1
+			WHEN inpat.DischargeDateKey = '-2' THEN '' -- Return blank if -2
 			WHEN inpat.DischargeDateKey IS NULL THEN '' -- Return blank if NULL
 			ELSE FORMAT(CONVERT(DATE, CAST(inpat.DischargeDateKey AS CHAR(8)), 112),'MMddyyyy')
 		END, -- Format the date to MMddyyyy      
-
 		[Patient Discharge Status] = inpat.DischargeDispositionCode,
 		[Unit] = inpat.DepartmentName,
 		[Service] = HospitalService,
@@ -280,11 +282,11 @@ DROP TABLE #PressGaneyFile;
 		[Room] = inpat.RoomName,
 		[Bed] = inpat.BedName,
 		[Hospitalist] = '',
-		[Fast Track or Acute Flag] = '',
+		[Fast Track or Acute Flag] = '', --ED
 		[Email] = inpat.EmailAddress,
 		[Hospitalist_1] = '',
 		[Hospitalist_2] = '',
-		[ER_ADMIT] = CASE WHEN inpat.AdmissionSource = 'Emergency Room' THEN 'Y' ELSE 'N' END,
+		[ER_ADMIT] = '',
 		[Other Diagnosis or Procedure Code] = '', 	
 		[Procedure Code 1] =  cptPat.CPT1,
 		[Procedure Code 2] =  cptPat.CPT2,
@@ -296,7 +298,7 @@ DROP TABLE #PressGaneyFile;
 		[No Publicity Flag] = 'N',
 		[State Regulation Flag] = 'N',
 		[Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
-		[Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.ProviderType = 'Surgery'  THEN 'Y' ELSE 'N' END,
+		[Transferred/admitted to inpatient] = '',
 		[PharmacyType] = '',
 		[ICU] = '',
 		[Virtual Nursing] = '', --Y or N
@@ -306,7 +308,8 @@ DROP TABLE #PressGaneyFile;
 		LEFT JOIN CDW_report.FullAccess.DrgDim drg WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
 		LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
 		LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm WITH (NOLOCK) ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
-		LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc WITH (NOLOCK) ON inpat.DepartmentKey = loc.DepartmentKey
+		--LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc WITH (NOLOCK) ON inpat.DepartmentKey = loc.DepartmentKey
+		LEFT JOIN [ETLProcedureRepository].[dbo].[PressGaneySurveyMap] loc WITH (NOLOCK) ON inpat.DepartmentEpicId = loc.DepartmentEpicId
 		LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha WITH (NOLOCK) ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
 		LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq WITH (NOLOCK) ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
 		LEFT JOIN MobileNumbers mn	ON inpat.PatientDurableKey = mn.PatientDurableKey AND mn.rn = 1

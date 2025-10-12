@@ -6,6 +6,6 @@
     "\\Press Ganey\\PG New File Format\\Stored Procs",
     "\\Press Ganey\\PG New File Format\\Tables"
   ],
-  "SelectedNode": "\\Press Ganey\\PG New File Format\\Tables\\CREATE TABLE [dbo].[PressGaney_TrackingRecords_NFF].sql",
+  "SelectedNode": "\\Press Ganey\\PG New File Format\\ETL Execution Log – Press Ganey Survey Engine.sql",
   "PreviewInSolutionExplorer": false
 }

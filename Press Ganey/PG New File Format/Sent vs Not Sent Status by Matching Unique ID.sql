@@ -10,10 +10,13 @@ SELECT
     CASE 
         WHEN tr.[SurveySentDate] IS NULL THEN 'Not Sent'
         ELSE 'Sent'
-    END AS TrackingSentStatus
+    END AS TrackingSentStatus,
+	notes
 FROM dbo.PressGaneyDailyFile_Archive a
 LEFT JOIN dbo.PressGaney_TrackingRecords_NFF tr
     ON a.[Unique ID] = CAST(tr.[unique_ID] AS NVARCHAR(255))
+
+	--Where [Survey Designator] = 'NICU0101'
 
 Order by [Last Name]
 

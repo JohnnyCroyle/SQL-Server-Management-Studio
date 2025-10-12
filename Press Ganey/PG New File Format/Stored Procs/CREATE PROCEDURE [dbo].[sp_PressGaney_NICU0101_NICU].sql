@@ -1,6 +1,6 @@
 USE [ETLProcedureRepository]
 GO
-/****** Object:  StoredProcedure [dbo].[sp_PressGaney_OU0101_Rehab]    Script Date: 9/18/2025 2:52:57 PM ******/
+/****** Object:  StoredProcedure [dbo].[sp_PressGaney_NICU0101_NICU]    Script Date: 9/18/2025 2:52:57 PM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -9,33 +9,21 @@ GO
 
 /*-- =============================================
 ------ Author:		Johnny Croyle
------- Create date: 08/13/2025
+------ Create date: 10/11/2025
 ------ Description:	get dataset for Press Ganey's New File Format for Survey's
 ------ This pull will be Encounter based
 ------ and will include all services
 ------ for MaineHealth
 ------
------- REHAB - OU0101
------- This is a test file for the new format
+------ NICU - TODO - NEED SURVEY Designator
+------ This is a survey file for the new format
 ------ for Press Ganey
------- Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
------- Added Mobile Number to the file. 8/22/2025  
------- Added CPT codes to the file. 8/22/2025
------- Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
-------
------- This procedure extracts patient encounter data for rehabilitation services,
------- including demographic, provider, department, and visit details.
------- It applies Press Ganey formatting rules for race, ethnicity, and language.
------- Mobile numbers and up to six CPT procedure codes are included per encounter.
------- The procedure ensures only new records are sent by tracking unique IDs.
------- Output is inserted into the Press Ganey daily file table for downstream processing.
------- Error handling is implemented to log issues and rethrow exceptions.
------- Please update survey designator and address fields as needed for future file format changes.
+
 ------ For questions or updates, contact Johnny Croyle.
 ------ =============================================*/
 
 ------ =============================================*/
-ALTER PROCEDURE [dbo].[sp_PressGaney_OU0101_Rehab] 
+CREATE PROCEDURE [dbo].[sp_PressGaney_NICU0101_NICU] 
 	@StartDate varchar(10),
 	@EndDate varchar(10)
 
@@ -50,7 +38,7 @@ DROP TABLE #PressGaneyFile;
 
 	declare @StartDateInt BIGINT,
 			@EndDateInt   BIGINT,
-			@file_type	  varchar(10) = 'OU0101',
+			@file_type	  varchar(10) = 'NICU0101',
 			@maxD		  datetime, 
 			@selfCorrectDate	int,
 			@tmpDate			date,
@@ -147,16 +135,14 @@ DROP TABLE #PressGaneyFile;
 				DischargeDispositionCode,
 				ServiceAreaEpicId
             FROM CDW_report.FullAccess.EncounterFact en 
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat WITH (NOLOCK) ON en.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
-				INNER JOIN CDW_report.FullAccess.ProviderDim prov WITH (NOLOCK) ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep WITH (NOLOCK) ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
-                LEFT JOIN CDW_report.dbo.BillingAccountFact bill WITH (NOLOCK) ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
+				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
+				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON  prov.ProviderKey = en.ProviderKey  
+				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
+                LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
             WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
-				AND en.[Type] IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Hospital Encounter',
-				'Office Visit', 'Clinical Support',' Behavioral Health', 'Nurse Triage', 'Results Follow-Up', 'Telemedicine, IMAT')
-				AND dep.DepartmentSpecialty IN ('Speech Therapy ','Occupational Therapy','Physical Therapy','Sports Medicine','Rehabilitation','Orthopedic')
-				AND DerivedEncounterStatus <> 'Invalid'
-				AND pat.AgeInYears >= 18
+				AND en.[Type] = 'Hospital Encounter'
+				AND dep.DepartmentSpecialty = 'Neonatology'
+				AND DerivedEncounterStatus = 'Complete'
         ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
@@ -200,7 +186,7 @@ DROP TABLE #PressGaneyFile;
 	-- Select the required fields and format them as per the new Press Ganey file format
 	-- Ensure to handle NULL values and format dates correctly
 	SELECT DISTINCT
-		[Survey Designator] = 'OU0101', --TODO: Update this to the correct survey designator if needed
+		[Survey Designator] = @file_type,
 		[Client ID] = ISNULL(loc.PressGaneyClientID,'CRAP'),
 		[Last Name] = inpat.LastName,
 		[Middle Initial] =  ISNULL(LEFT(inpat.MiddleName, 1), ''),
@@ -332,13 +318,13 @@ BEGIN
 END
 
 
--- Output
---Select * from #PressGaneyFile
---Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-
 --Clean up temp table
 DROP TABLE #PressGaneyFile;
 
+
+-- Output
+--Select * from #PressGaneyFile
+--Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
 
 
 END TRY

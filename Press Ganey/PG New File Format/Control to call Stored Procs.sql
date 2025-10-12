@@ -89,3 +89,7 @@ SELECT CAST(FORMAT(getdate()- 31, 'MM/dd/yyyy') as varchar(10)) AS StartDate, CA
 
 --01/28/2025	02/27/2025
 
+
+Select * from  dbo.PressGaneyDailyFile_Archive where [Survey Designator] = 'NICU0101'
+
+Select * from  dbo.PressGaney_TrackingRecords_NFF where file_type  = 'NICU0101'

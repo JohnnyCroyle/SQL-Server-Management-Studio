@@ -534,7 +534,7 @@ INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [S
 GO
 INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (24240, N'OR0101', N'Outpatient Rehab', N'11003021', N'>=18      ', N'')
 GO
-INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (30270, N'UC0101', N'Walk-In Clinic - Adult', N'11004101', N'>=18      ', N'Changing to client ID 1946 - 4/24/2025')
+INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (1946, N'UC0101', N'Walk-In Clinic - Adult', N'11004101', N'>=18      ', N'Changing to client ID 1946 - 4/24/2025')
 GO
 INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (30270, N'UC0101', N'Walk-In Clinic - Adult', N'11002193', N'>=18      ', N'')
 GO
@@ -544,7 +544,7 @@ INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [S
 GO
 INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (30270, N'UC0101', N'Walk-In Clinic - Adult', N'11002206', N'>=18      ', N'')
 GO
-INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (30270, N'UC0102', N'Walk-In Clinic - Peds', N'11004101', N'<18       ', N'Changing to client ID 1946 - 4/24/2025')
+INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (1946, N'UC0102', N'Walk-In Clinic - Peds', N'11004101', N'<18       ', N'Changing to client ID 1946 - 4/24/2025')
 GO
 INSERT [dbo].[PressGaneySurveyMap] ([PressGaneyClientID], [SurveyDesignator], [Service], [DepartmentEpicId], [AgeQualifier], [Description]) VALUES (30270, N'UC0102', N'Walk-In Clinic - Peds', N'11002193', N'<18       ', N'')
 GO
