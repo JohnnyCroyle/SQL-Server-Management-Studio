@@ -1,22 +1,26 @@
-﻿USE [ETLProcedureRepository]
-GO
+﻿--Alley
+	
+--James
+	
+--E470067
 
-IF OBJECT_ID('tempdb..#PressGaneyFile') IS NOT NULL
-DROP TABLE #PressGaneyFile;
-
-DECLARE @StartDate VARCHAR(10) = '01/01/2025',
-        @EndDate   VARCHAR(10) = '01/31/2025',
+DECLARE @StartDate VARCHAR(10) = '8/01/2025',
+        @EndDate   VARCHAR(10) = '9/10/2025',
         @StartDateInt BIGINT,
         @EndDateInt   BIGINT;
 
 SELECT 
-	@StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
+    @StartDateInt = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_Start_Date_Fn(@StartDate), 'yyyyMMdd') AS BIGINT),
     @EndDateInt   = CAST(FORMAT([ETLProcedureRepository].dbo.MH_Interpret_End_Date_Fn(@EndDate), 'yyyyMMdd') AS BIGINT);
 
 
+IF OBJECT_ID('tempdb..#PressGaneyFile') IS NOT NULL
+DROP TABLE #PressGaneyFile;
 
-	declare 
-			@file_type	  varchar(10) = 'SP0101',
+
+
+
+	declare @file_type	  varchar(10) = 'SP0101',
 			@maxD		  datetime, 
 			@selfCorrectDate	int,
 			@tmpDate			date,
@@ -49,7 +53,7 @@ SELECT
 -- We will use a CTE to get the patient encounters and then join with other tables as needed
    
         ;WITH Patients AS (
-			SELECT DISTINCT
+			SELECT 
 				dep.DepartmentSpecialty,
 				pat.PatientEpicId,
 				pat.DurableKey,
@@ -90,7 +94,7 @@ SELECT
 				dep.RoomName,
 				dep.BedName,
 				dep.ServiceAreaEpicId,
-                meds.MedicationDispenseKey as EncounterKey, -- this is not encounter key but I need a Prim key for tracking
+                medorder.EncounterKey, 
 				meds.PatientDurableKey,
 				meds.PatientKey,
                 NULL as AdmissionSource,
@@ -109,7 +113,7 @@ SELECT
 				DispensePreparedDateKey as DateKey  --This date is of the start of the encounter, visit, etc
             FROM CDW_report.FullAccess.MedicationDispenseFact as meds WITH (NOLOCK)
 				INNER JOIN CDW_Report.FullAccess.PatientDim pat WITH (NOLOCK) ON meds.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
-				LEFT JOIN CDW_report.FullAccess.MedicationOrderFact as medorder WITH (NOLOCK) ON  medorder.MedicationOrderKey = meds.MedicationOrderKey 
+				INNER JOIN CDW_report.FullAccess.MedicationOrderFact as medorder WITH (NOLOCK) ON  medorder.MedicationOrderKey = meds.MedicationOrderKey 
 																		AND  medorder.SentToPharmacyKey = meds.DispensePharmacyKey 
 																		AND medorder.PatientDurableKey = pat.DurableKey 
 				LEFT JOIN CDW_report.FullAccess.ProviderDim prov ON  prov.ProviderKey = medorder.OrderedByProviderKey 
@@ -118,6 +122,15 @@ SELECT
 			meds.DispensePreparedDateKey BETWEEN @StartDateInt AND @EndDateInt
 			AND meds.Mode =  'Outpatient'
 			AND FillStatus = 'Dispensed'
+			AND pat.AgeInYears >= 18
+			AND NOT EXISTS (SELECT 1
+							FROM CLARITY.dbo.PATIENT_TYPE patT WITH (NOLOCK)
+							INNER JOIN CLARITY.dbo.ZC_PATIENT_TYPE zc WITH (NOLOCK)
+								ON patT.PATIENT_TYPE_C = zc.PATIENT_TYPE_C
+							WHERE patT.PAT_ID = pat.PatientEpicId
+								AND zc.PATIENT_TYPE_C IN (2, 6)) -- 2 confidential, 6 prisioner
+
+
         ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
@@ -159,36 +172,28 @@ SELECT
         PharmacyType as (
 
 				SELECT top 1 with ties
-					PAT_ID,
+					PAT_MRN_ID,
 					PAT_FLAG_TYPE_C,
 					ACCT_NOTE_INSTANT,
 					CASE 
 					WHEN PAT_FLAG_TYPE_C = 2028 THEN 'Home Delivery'
-					WHEN PAT_FLAG_TYPE_C IN (2012, 2025) THEN 'Specialty Pharmacy'
+					WHEN PAT_FLAG_TYPE_C IN (2012, 2017) THEN 'Specialty Pharmacy'
 				ELSE NULL
                 END AS PharmacyType
 				FROM Patients as p
-					INNER JOIN [CLARITY].[dbo].[PATIENT] AS pat WITH (NOLOCK) ON p.PatientEpicId = pat.PAT_ID
+					INNER JOIN [CLARITY].[dbo].[PATIENT] AS pat WITH (NOLOCK) ON p.EnterpriseId = pat.PAT_MRN_ID
 					INNER JOIN [CLARITY].[dbo].[PATIENT_FYI_FLAGS] as flags WITH (NOLOCK) ON PAT_ID =  pat.PAT_ID          
 				WHERE PAT_FLAG_TYPE_C IN (2012,2025,2028) AND ACTIVE_C = 1
-				order by  ROW_NUMBER() over (partition by PAT_ID order by ACCT_NOTE_INSTANT desc)
-
+				order by  ROW_NUMBER() over (partition by PAT_MRN_ID order by ACCT_NOTE_INSTANT desc)
         )
-        
-
 
 --Select * from PharmacyType
-
-
-
-
-
 
 -- Select the required fields and format them as per the new Press Ganey file format
 -- Ensure to handle NULL values and format dates correctly
 SELECT DISTINCT
     [Survey Designator] = 'SP0101', --TODO: Update this to the correct survey designator if needed
-    [Client ID] = loc.PressGaneyId,
+    [Client ID] = ISNULL(loc.PressGaneyClientID,'CRAP'),
     [Last Name] = inpat.LastName,
     [Middle Initial] =  ISNULL(LEFT(inpat.MiddleName, 1), ''),
     [First Name] = inpat.FirstName,
@@ -205,7 +210,7 @@ SELECT DISTINCT
     [Gender] = CASE inpat.Sex WHEN 'Male' THEN '1' WHEN 'Female' THEN '2' ELSE 'M' END,
     [Race] = 
         CASE 
-            WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
+            WHEN inpat.FirstRace IS NULL OR inpat.FirstRace IN ('', 'Unknown', 'Not Available', 'Missing','Declined','*Unspecified','*Deleted','*Not Applicable','*Unknown') THEN 'Prefer not to answer'
             WHEN inpat.FirstRace IN ('American Indian or Alaska Native', 'American Indian/Alaska Native', 'American Indian', 'Alaska Native') THEN 'American Indian or Alaskan Native'
             WHEN inpat.FirstRace IN ('Asian', 'Asian - Chinese', 'Asian - Indian', 'Asian - Japanese', 'Asian - Korean', 'Asian - Vietnamese', 'Asian - Filipino', 'Asian - Other') THEN 'Asian'
             WHEN inpat.FirstRace IN ('Black or African American', 'Black/African American', 'Black', 'African American') THEN 'Black or African American'
@@ -213,16 +218,16 @@ SELECT DISTINCT
             WHEN inpat.FirstRace IN ('White', 'Caucasian', 'White or Caucasian') THEN 'White or Caucasian'
             WHEN inpat.FirstRace IN ('Other', 'Other Race') THEN 'Other'
             -- Handle multiple race using both inpat.FirstRace and inpat.SecondRace
-            WHEN inpat.FirstRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race')
-                 OR inpat.SecondRace IN ('Two or more races', 'Multiple', 'Multiracial', 'More than one race')
+            WHEN inpat.FirstRace IN ('Two or more races', 'Multiple', 'Multiracial', 'Multi Racial', 'More than one race')
+                 OR inpat.SecondRace IN ('Two or more races', 'Multiple', 'Multiracial', 'Multi Racial', 'More than one race')
                  OR (inpat.SecondRace IS NOT NULL AND inpat.SecondRace <> '' AND inpat.SecondRace <> inpat.FirstRace) THEN 'Two or more races'
             ELSE inpat.FirstRace
         END,
     [Ethnicity] = 
         CASE 
-            WHEN inpat.Ethnicity IS NULL OR inpat.Ethnicity IN ('', 'Unknown', 'Not Available', 'Missing') THEN 'Prefer not to answer'
+            WHEN inpat.Ethnicity IS NULL OR inpat.Ethnicity IN ('', 'Unknown', 'Not Available', 'Missing','Declined','*Unspecified','Unknown-Patient Confirmed') THEN 'Prefer not to answer'
             WHEN inpat.Ethnicity IN ('Hispanic or Latino', 'Hispanic/Latino', 'Hispanic') THEN 'Hispanic/Latino'
-            WHEN inpat.Ethnicity IN ('Not Hispanic or Latino', 'Not Hispanic/Latino', 'Non-Hispanic') THEN 'Not Hispanic/Latino'
+            WHEN inpat.Ethnicity IN ('Not Hispanic or Latino', 'Not Hispanic/Latino', 'Non-Hispanic','White') THEN 'Not Hispanic/Latino'
             ELSE inpat.Ethnicity
         END,
     [Date of Birth] = CASE 
@@ -237,10 +242,10 @@ SELECT DISTINCT
     [Location Name] = inpat.LocationName,
     [Department Code] = inpat.DepartmentEpicId,
     [Department Name] = inpat.DepartmentName,
-    [Attending Physician NPI] = inpat.Npi,
-    [Attending Physician Name] = inpat.ProviderName,
-    [Provider Type] = inpat.ProviderType,
-    [Provider specialty] = inpat.ProviderSpeciality,
+    [Attending Physician NPI] = ISNULL(IIF(inpat.Npi='','*Unspecified',inpat.Npi),'*Unspecified'),
+    [Attending Physician Name] = ISNULL(IIF(inpat.ProviderName='','*Unspecified',inpat.ProviderName),'*Unspecified'),
+    [Provider Type] = ISNULL(IIF(inpat.ProviderType='','*Unspecified',inpat.ProviderType),'*Unspecified'),
+    [Provider specialty] = ISNULL(IIF(inpat.ProviderSpeciality='','*Unspecified',inpat.ProviderSpeciality),'*Unspecified'),
     [Site address 1] = inpat.ProviderAddress,
     [Site address 2] = '',
     [Site city] = inpat.ProviderCity,
@@ -253,7 +258,8 @@ SELECT DISTINCT
         WHEN inpat.AdmissionDateKey IS NULL THEN '' -- Return blank if NULL
         ELSE FORMAT(CONVERT(DATE, CAST(inpat.AdmissionDateKey AS CHAR(8)), 112),'MMddyyyy')
     END, 
-    [Visit or Admit Time] = RIGHT('0000' + CAST(inpat.AdmissionTimeOfDayKey AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
+	--[Visit or Admit Time] = FORMAT(CAST(inpat.EventDateTime AS time), 'HHmm'), -- Ensure time is in HHMM format
+	[Visit or Admit Time] = RIGHT('0000' + CAST(FORMAT(CAST(inpat.EventDateTime AS time),'hhmm') AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
     [Discharge Date] = CASE 
         WHEN inpat.DischargeDateKey = '-1' THEN '' -- Return blank if -1
         WHEN inpat.DischargeDateKey = '-2' THEN '' -- Return blank if -2
@@ -267,14 +273,14 @@ SELECT DISTINCT
     [Payor / Insurance / Financial Class] = '',-- cov.PayorName, -- Not required for Press Ganey
     --[Payor / Insurance / Financial Class] = cov.PayorName, 
     [Length of Stay] = LengthOfStayInDays,
-    [Room] = inpat.RoomName,
-    [Bed] = inpat.BedName,
+    [Room] = '',
+    [Bed] = '',
     [Hospitalist] = '',
-    [Fast Track or Acute Flag] = '',
+    [Fast Track or Acute Flag] = '', --ED
     [Email] = inpat.EmailAddress,
     [Hospitalist_1] = '',
     [Hospitalist_2] = '',
-    [ER_ADMIT] = CASE WHEN inpat.AdmissionSource = 'Emergency Room' THEN 'Y' ELSE 'N' END,
+    [ER_ADMIT] = '',
 	[Other Diagnosis or Procedure Code] = '', 	
 	[Procedure Code 1] =  cptPat.CPT1,
 	[Procedure Code 2] =  cptPat.CPT2,
@@ -286,47 +292,30 @@ SELECT DISTINCT
     [No Publicity Flag] = 'N',
     [State Regulation Flag] = 'N',
     [Newborn patient] = CASE WHEN inpat.PatientClass = 'Newborn' THEN 'Y' ELSE 'N' END,
-    [Transferred/admitted to inpatient] = CASE WHEN inpat.DischargeDisposition =  'Admitted as an Inpatient to this Hospital' AND inpat.ProviderType = 'Surgery'  THEN 'Y' ELSE 'N' END,
-    [PharmacyType] = pharm.PharmacyType,
+    [Transferred/admitted to inpatient] = '',
+    [PharmacyType] = ISNULL(pharm.PharmacyType,'Retail Pharmacy'),
 	[ICU] = '',
+	[Virtual Nursing] = '', --Y or N
     '$' EOR,
-	inpat.EventDateTime
+	inpat.EventDateTime -- Need this to determine what survey gets sent closested to midnight
 INTO #PressGaneyFile FROM Patients inpat 
 	LEFT JOIN CDW_report.FullAccess.DrgDim drg WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
 	LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia WITH (NOLOCK)  ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
 	LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm WITH (NOLOCK) ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
-	LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc WITH (NOLOCK) ON inpat.DepartmentKey = loc.DepartmentKey
+	--LEFT JOIN [EDW_Epic_DMart].[dbo].[DepartmentDimExt] loc WITH (NOLOCK) ON inpat.DepartmentKey = loc.DepartmentKey
+	LEFT JOIN [ETLProcedureRepository].[dbo].[PressGaneySurveyMap] loc WITH (NOLOCK) ON inpat.DepartmentEpicId = loc.DepartmentEpicId
 	LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha WITH (NOLOCK) ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
 	LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq WITH (NOLOCK) ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
 	LEFT JOIN MobileNumbers mn	ON inpat.PatientDurableKey = mn.PatientDurableKey AND mn.rn = 1
 	LEFT JOIN CPTList cptPat on cptPat.PatientDurableKey = inpat.PatientDurableKey
-	LEFT JOIN PharmacyType pharm on inpat.PatientEpicId = pharm.PAT_ID
+	LEFT JOIN PharmacyType pharm on inpat.EnterpriseId = pharm.PAT_MRN_ID
 	LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes] as PG_Lang_Code WITH (NOLOCK) ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
-
-
-BEGIN
-	DELETE FROM #PressGaneyFile
-	WHERE [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
-
--- track the records that being sent this time
-	INSERT INTO [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID],[PatientID],[EncounterDate])
-	SELECT @file_type, [Unique ID],[Medical Record Number],[Visit or Admit Date] FROM #PressGaneyFile
-
-	--Adds to Press Ganey Daily File Bucket
-	INSERT INTO [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-	SELECT *, @ProcName as CreatedBy, getdate()as CreatedDate FROM #PressGaneyFile
-
-END
 
 
 -- Output
 Select * from #PressGaneyFile
 --Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-
-
-
-
 
 
 

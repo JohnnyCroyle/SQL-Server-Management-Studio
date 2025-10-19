@@ -1,40 +1,11 @@
 USE [ETLProcedureRepository]
 GO
-/****** Object:  StoredProcedure [dbo].[sp_PressGaney_SP0102HX_Palliative_Care]    Script Date: 9/18/2025 2:52:57 PM ******/
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
+
+Declare
+	@StartDate varchar(10) = '8/1/2025',
+	@EndDate varchar(10) = '10/11/2025'
 
 
-/*-- =============================================
------- Author:		Johnny Croyle
------- Create date: 08/13/2025
------- Description:	get dataset for Press Ganey's New File Format for Survey's
------- This pull will be Encounter based
------- and will include all services
------- for MaineHealth
-------
------- Palliative care - SP0102HX
------- This is a test file for the new format
------- for Press Ganey
------- Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
------- Added Mobile Number to the file. 8/22/2025  
------- Added CPT codes to the file. 8/22/2025
------- Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
-
------- For questions or updates, contact Johnny Croyle.
------- =============================================*/
-
------- =============================================*/
-ALTER PROCEDURE [dbo].[sp_PressGaney_SP0102HX_Palliative_Care] 
-	@StartDate varchar(10),
-	@EndDate varchar(10)
-
-
-AS
-BEGIN TRY
-	SET NOCOUNT ON;
 
 IF OBJECT_ID('tempdb..#PressGaneyFile') IS NOT NULL
 DROP TABLE #PressGaneyFile;
@@ -42,7 +13,7 @@ DROP TABLE #PressGaneyFile;
 
 	declare @StartDateInt BIGINT,
 			@EndDateInt   BIGINT,
-			@file_type	  varchar(10) = 'SP0102HX',
+			@file_type	  varchar(10) = 'OU0101',
 			@maxD		  datetime, 
 			@selfCorrectDate	int,
 			@tmpDate			date,
@@ -53,10 +24,10 @@ DROP TABLE #PressGaneyFile;
 		SET @ProcName = OBJECT_NAME(@@PROCID);
 
 
-		if (@StartDate is null)
-			set @StartDate = 't-30'
-		if (@EndDate is null)
-			set @EndDate = 't'   
+		--if (@StartDate is null)
+		--	set @StartDate = 't-30'
+		--if (@EndDate is null)
+		--	set @EndDate = 't'   
 
 		-- self-corrected lookback date for DR purpose
 		select @maxD = max(created_date) from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where file_type = @file_type
@@ -74,85 +45,80 @@ DROP TABLE #PressGaneyFile;
 -- This will be the driver for the data we need to pull
 -- We will use a CTE to get the patient encounters and then join with other tables as needed
    
-        ;WITH PatientEncounters AS (
-			--Specialty = Palliative Care AND Encounter type in (Office Visit, Clinical Support, Behavioral Health, Nurse Triage, Results Follow-Up, Telemedicine, IMAT)
-			SELECT DISTINCT
-				en.type as EncounterType,
-				dep.DepartmentSpecialty,
-                en.PatientDurableKey, 
-                en.PatientKey,
-				en.DateKey, --This date is of the start of the encounter, visit
-				en.ProviderKey,
-				en.ProviderDurableKey,
-				en.PrimaryDiagnosisKey,
-				pat.PatientEpicId,
-				pat.DurableKey,
-				pat.LastName,
-				pat.MiddleName,
-				pat.FirstName,
-				pat.AddressLine1_X,
-				pat.AddressLine2_X,
-				pat.City,
-				pat.StateOrProvinceAbbreviation,
-				pat.PostalCode,
-				pat.HomePhoneNumber,
-				pat.Sex,
-				pat.FirstRace,
-				pat.SecondRace,
-				pat.Ethnicity,
-				pat.BirthDate,
-				pat.SexAssignedAtBirth,
-				pat.PreferredWrittenLanguage_X,
-				pat.EnterpriseId,
-				pat.DeathDate,
-				pat.EmailAddress,
-				pat.AgeInYears,
-				dep.LocationEpicId,
-				dep.LocationName,
-				prov.Npi,
-				prov.Name as ProviderName,
-				prov.Type as ProviderType,
-				prov.PrimarySpecialty as ProviderSpeciality,
-				dep.Address as ProviderAddress,
-				dep.City as ProviderCity,
-				dep.StateOrProvinceAbbreviation as ProviderState,
-				dep.PostalCode as ProviderZipcode,
-				dep.DepartmentKey,
-                dep.DepartmentEpicId,
-				dep.DepartmentName,
-				dep.IsBed,
-				dep.RoomName,
-				dep.BedName,
-                en.EncounterKey,
-                --bill.AdmissionSource,
-                DischargeDisposition,
-                PatientClass,
-				bill.DiagnosisComboKey,
-				--en.DateKey as AdmissionDateKey, --This date is of the start of the encounter. Will use for Visits
-				bill.AdmissionDateKey,
-				en.Date as EventDateTime,
-                --NOTE to self: This is the date of the encounter, not the admission date. 
-                --Probably should be used for Visits and not Admissions
-				bill.DischargeDateKey,
-				AdmissionTimeOfDayKey, --Not required for Press Ganey
-                DischargeTimeOfDayKey, --Not required for Press Ganey 
-				DischargeProviderDurableKey,
-				AdmissionSourceCode,
-				DischargeDispositionCode,
-				bill.BillingAccountKey,
-				ServiceAreaEpicId
-            FROM CDW_report.FullAccess.EncounterFact en 
-				INNER JOIN CDW_Report.FullAccess.PatientDim pat ON en.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1 --Most Current
-				INNER JOIN CDW_report.FullAccess.ProviderDim prov ON  prov.ProviderKey = en.ProviderKey  
-				INNER JOIN CDW_Report.FullAccess.DepartmentDim dep ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
-                LEFT JOIN CDW_report.dbo.BillingAccountFact bill ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
-            WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
-				AND en.[Type] IN ('Office Visit','Clinical Support','Behavioral Health','Nurse Triage','Results Follow-Up','Telemedicine','IMAT')
-				AND dep.DepartmentSpecialty = 'Palliative Care'
-				AND pat.DeathDate IS NULL
-				AND DerivedEncounterStatus = 'Complete'
-				AND pat.AgeInYears >= 18
-
+	;WITH PatientEncounters AS (
+					-- Encounter Type = (Hospital Encounter or Appointment) AND Specialty in (Radiology,Cardiac Testing, Sleep Center, Otolaryngology, Interventional Radiology, Gastroenterology, Pulmonology, Cardiology, Audiology, Ophthalmology)
+					SELECT DISTINCT
+						en.type as EncounterType,
+						dep.DepartmentSpecialty,
+						en.PatientDurableKey, 
+						en.PatientKey,
+						en.DateKey,
+						en.ProviderKey,
+						en.ProviderDurableKey,
+						en.PrimaryDiagnosisKey,
+						pat.PatientEpicId,
+						pat.DurableKey,
+						pat.LastName,
+						pat.MiddleName,
+						pat.FirstName,
+						pat.AddressLine1_X,
+						pat.AddressLine2_X,
+						pat.City,
+						pat.StateOrProvinceAbbreviation,
+						pat.PostalCode,
+						pat.HomePhoneNumber,
+						pat.Sex,
+						pat.FirstRace,
+						pat.SecondRace,
+						pat.Ethnicity,
+						pat.BirthDate,
+						pat.SexAssignedAtBirth,
+						pat.PreferredWrittenLanguage_X,
+						pat.EnterpriseId,
+						pat.DeathDate,
+						pat.EmailAddress,
+						pat.AgeInYears,
+						dep.LocationEpicId,
+						dep.LocationName,
+						prov.Npi,
+						prov.Name as ProviderName,
+						prov.Type as ProviderType,
+						prov.PrimarySpecialty as ProviderSpeciality,
+						dep.Address as ProviderAddress,
+						dep.City as ProviderCity,
+						dep.StateOrProvinceAbbreviation as ProviderState,
+						dep.PostalCode as ProviderZipcode,
+						dep.DepartmentKey,
+						dep.DepartmentEpicId,
+						dep.DepartmentName,
+						dep.IsBed,
+						dep.RoomName,
+						dep.BedName,
+						en.EncounterKey,
+						en.DischargeDisposition,
+						en.PatientClass,
+						bill.DiagnosisComboKey,
+						ISNULL(bill.AdmissionDateKey,en.DateKey) as AdmissionDateKey,
+						en.Date as EventDateTime,
+						en.DischargeDateKey,
+						bill.AdmissionTimeOfDayKey,
+						bill.DischargeTimeOfDayKey,
+						en.DischargeProviderDurableKey,
+						en.AdmissionSourceCode,
+						en.DischargeDispositionCode,
+						bill.BillingAccountKey,
+						dep.ServiceAreaEpicId
+					FROM CDW_report.FullAccess.EncounterFact en 
+						INNER JOIN CDW_Report.FullAccess.PatientDim pat WITH (NOLOCK) ON en.PatientDurableKey = pat.DurableKey AND pat.isCurrent = 1
+						INNER JOIN CDW_report.FullAccess.ProviderDim prov WITH (NOLOCK) ON en.ProviderDurableKey = prov.DurableKey AND en.ProviderKey = prov.ProviderKey
+						INNER JOIN CDW_Report.FullAccess.DepartmentDim dep WITH (NOLOCK) ON en.DepartmentKey = dep.DepartmentKey AND dep.IsDepartment = 1 AND dep.ServiceAreaEpicId = '110'
+						LEFT JOIN CDW_report.dbo.BillingAccountFact bill WITH (NOLOCK) ON en.PatientDurableKey = bill.PatientDurableKey AND bill.PrimaryEncounterKey = en.EncounterKey
+					WHERE en.DateKey BETWEEN @StartDateInt AND @EndDateInt
+						AND en.[Type] IN ('Hospital Encounter', 'Appointment')
+						AND dep.DepartmentSpecialty IN ('Radiology', 'Cardiac Testing', 'Sleep Center', 'Otolaryngology', 'Interventional Radiology', 'Gastroenterology', 'Pulmonology', 'Cardiology', 'Audiology', 'Ophthalmology')
+						AND pat.AgeInYears >= 18
+						AND pat.DeathDate IS NULL
+						AND en.DerivedEncounterStatus = 'Complete'
         ),-- We will also include the mobile numbers and crosstab the CPT codes for each patient encounter 
         MobileNumbers AS (
             SELECT
@@ -200,6 +166,7 @@ DROP TABLE #PressGaneyFile;
         
 
 
+--Select * from PatientEncounters 
 
 	-- Select the required fields and format them as per the new Press Ganey file format
 	-- Ensure to handle NULL values and format dates correctly
@@ -263,22 +230,36 @@ DROP TABLE #PressGaneyFile;
 		[Site city] = inpat.ProviderCity,
 		[Site state] = inpat.ProviderState,
 		[Site zip] = inpat.ProviderZipcode,
-		[Patient Admission Source] = inpat.AdmissionSourceCode,
+		[Patient Admission Source] =
+			CASE 
+				WHEN inpat.AdmissionSourceCode IS NULL OR LTRIM(RTRIM(inpat.AdmissionSourceCode)) = '' THEN '9'
+				ELSE inpat.AdmissionSourceCode
+			END,
 		[Visit or Admit Date] = CASE 
-			WHEN inpat.AdmissionDateKey = '-1' THEN '' -- Return blank if -1
-			WHEN inpat.AdmissionDateKey = '-2' THEN '' -- Return blank if -2
+			WHEN inpat.AdmissionDateKey = '-1' THEN FORMAT(CONVERT(DATE, CAST(inpat.EventDateTime AS CHAR(8)), 112),'MMddyyyy') -- Return eventdate if -1
+			WHEN inpat.AdmissionDateKey = '-2' THEN FORMAT(CONVERT(DATE, CAST(inpat.EventDateTime AS CHAR(8)), 112),'MMddyyyy') -- Return eventdate if -2
 			WHEN inpat.AdmissionDateKey IS NULL THEN '' -- Return blank if NULL
 			ELSE FORMAT(CONVERT(DATE, CAST(inpat.AdmissionDateKey AS CHAR(8)), 112),'MMddyyyy')
 		END, 
-		[Visit or Admit Time] = inpat.AdmissionTimeOfDayKey,
+		[Visit or Admit Time] =
+			CASE 
+				WHEN inpat.AdmissionTimeOfDayKey = -1 OR inpat.AdmissionTimeOfDayKey IS NULL OR inpat.AdmissionTimeOfDayKey = ''  THEN 
+					RIGHT('0000' + FORMAT(CAST(inpat.EventDateTime AS TIME), 'hhmm'), 4)
+				ELSE 
+					CAST(inpat.AdmissionTimeOfDayKey AS VARCHAR(4))
+			END,
 		--[Visit or Admit Time] = RIGHT('0000' + CAST(FORMAT(CAST(inpat.EventDateTime AS time),'hhmm') AS VARCHAR(4)), 4), -- Ensure time is in HHMM format
 		[Discharge Date] = CASE 
-			WHEN inpat.DischargeDateKey = '-1' THEN '' -- Return blank if -1
-			WHEN inpat.DischargeDateKey = '-2' THEN '' -- Return blank if -2
+			WHEN inpat.DischargeDateKey = '-1' THEN FORMAT(CONVERT(DATE, CAST(inpat.EventDateTime AS CHAR(8)), 112),'MMddyyyy') -- Return blank if -1
+			WHEN inpat.DischargeDateKey = '-2' THEN FORMAT(CONVERT(DATE, CAST(inpat.EventDateTime AS CHAR(8)), 112),'MMddyyyy') -- Return blank if -2
 			WHEN inpat.DischargeDateKey IS NULL THEN '' -- Return blank if NULL
 			ELSE FORMAT(CONVERT(DATE, CAST(inpat.DischargeDateKey AS CHAR(8)), 112),'MMddyyyy')
 		END, -- Format the date to MMddyyyy      
-		[Patient Discharge Status] = inpat.DischargeDispositionCode,
+		[Patient Discharge Status] =
+			CASE 
+				WHEN inpat.DischargeDispositionCode IS NULL OR LTRIM(RTRIM(inpat.DischargeDispositionCode)) = '' THEN 'M'
+				ELSE inpat.DischargeDispositionCode
+			END,
 		[Unit] = inpat.DepartmentName,
 		[Service] = HospitalService,
 		[Specialty] = inpat.DepartmentSpecialty,
@@ -311,9 +292,6 @@ DROP TABLE #PressGaneyFile;
 		'$' EOR,
 		inpat.EventDateTime -- Need this to determine what survey gets sent closested to midnight
 	INTO #PressGaneyFile FROM PatientEncounters inpat 
-		--LEFT JOIN CDW_report.FullAccess.DrgDim drg WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = drg.DrgKey AND drg.DrgCodeSet = 'MS-DRG'
-		--LEFT JOIN CDW_report.FullAccess.DiagnosisDim dia WITH (NOLOCK) ON inpat.PrimaryDiagnosisKey = dia.DiagnosisKey
-		--LEFT JOIN CDW_report.FullAccess.DiagnosisTerminologyDim diaTerm WITH (NOLOCK) ON dia.DiagnosisKey = diaTerm.DiagnosisKey AND diaTerm.[Type] = 'ICD-10-CM'
 		LEFT JOIN [ETLProcedureRepository].[dbo].[PressGaneySurveyMap] loc WITH (NOLOCK) ON inpat.DepartmentEpicId = loc.DepartmentEpicId
 		LEFT JOIN CDW_report.FullAccess.HospitalAdmissionFact ha WITH (NOLOCK) ON inpat.PatientDurableKey = ha.PatientDurableKey AND inpat.PatientKey = ha.PatientKey
 		LEFT JOIN CDW_report.FullAccess.BedRequestFact bedreq WITH (NOLOCK) ON ha.AdmissionBedRequestKey = bedreq.BedRequestKey AND inpat.DepartmentKey = bedreq.DestinationBedKey AND inpat.IsBed = 1
@@ -322,32 +300,7 @@ DROP TABLE #PressGaneyFile;
 		LEFT JOIN [ETLProcedureRepository].[dbo].[PG_Survey_Language_Codes]as PG_Lang_Code WITH (NOLOCK) ON PG_Lang_Code.Language = inpat.PreferredWrittenLanguage_X
 
 
-BEGIN
-	DELETE FROM #PressGaneyFile
-	WHERE [Unique ID] in (select [unique_ID] from [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] where [file_type] = @file_type )
-
--- track the records that being sent this time
-	INSERT INTO [ETLProcedureRepository].[dbo].PressGaney_TrackingRecords_NFF ([file_type],[unique_ID],[PatientEnterpriseID],[ServiceDate])
-	SELECT @file_type, [Unique ID],[Medical Record Number],[Visit or Admit Date] FROM #PressGaneyFile
-
-	--Adds to Press Ganey Daily File Bucket
-	INSERT INTO [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-	SELECT *, @ProcName as CreatedBy, getdate()as CreatedDate FROM #PressGaneyFile
-
-END
-
-
---Clean up temp table
-DROP TABLE #PressGaneyFile;
 
 
 -- Output
---Select * from #PressGaneyFile
---Select * from [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
-
-
-END TRY
-BEGIN CATCH
-	EXEC [ETLProcedureRepository].[dbo].[sp_logErrorInfo] @ProcName ;
-	THROW;
-END CATCH
+Select * from #PressGaneyFile

@@ -11,29 +11,27 @@ SET @ProcName = OBJECT_NAME(@@PROCID);
 
 
 -- Step 2: Join staged file with priority table and rank events
-WITH RankedEvents AS (
-    SELECT 
-        df.*,
-        stp.priority_rank,
-        ROW_NUMBER() OVER (
-            PARTITION BY df.[Medical Record Number] ,[Visit or Admit Date] --TODO Need to test and triple check this
-            ORDER BY stp.priority_rank DESC
-        ) AS rn
-    FROM dbo.PressGaneyDailyFile df
-    INNER JOIN dbo.PressGaneySurveyTypePriority stp
-        ON df.[Survey Designator] = stp.survey_type
-    LEFT JOIN dbo.PressGaney_TrackingRecords_NFF tr ON tr.PatientID = df.[Medical Record Number] AND tr.unique_ID = df.[Unique ID]
-    WHERE tr.SurveySentDate IS NULL -- Only exclude if a survey was actually sent
-  --Exclude patients who already had a regulatory survey sent that day
-	AND NOT EXISTS (
-		SELECT 1
-		FROM [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords] trk
-		WHERE trk.file_type IN ('OASCHAPS', 'HCHAPS')
-		  AND trk.created_date = @Today
-		  AND trk.unique_ID = df.[Unique ID]
-		  --AND trk.PatientID = df.[Medical Record Number] -- TODO -- Trang needs to add to her table\process
+    WITH RankedEvents AS (
+        SELECT 
+            df.*,
+            1 as priority_rank,
+            ROW_NUMBER() OVER (
+                PARTITION BY df.[Medical Record Number]
+                ORDER BY df.[EventCreatedDate] DESC --, stp.priority_rank DESC
+            ) AS rn
+        FROM dbo.PressGaneyDailyFile df
+        --INNER JOIN dbo.PressGaneySurveyTypePriority stp  ON df.[Survey Designator] = stp.survey_type
+        LEFT JOIN dbo.PressGaney_TrackingRecords_NFF tr  ON tr.PatientEnterpriseID = df.[Medical Record Number] 
+															AND tr.unique_ID = df.[Unique ID]
+        WHERE tr.SurveySentDate IS NULL
+        AND NOT EXISTS (
+            SELECT 1
+            FROM [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords] trk
+            WHERE trk.file_type IN ('OASCAHPS', 'HCAHPS')
+              AND trk.PatientEnterpriseID = tr.PatientEnterpriseID
+              AND REPLACE(CONVERT(VARCHAR, trk.ServiceDate, 120), '\', '') = REPLACE(CONVERT(VARCHAR, tr.ServiceDate, 120), '\', '')
+        )
 	)
-)
 
 -- Step 3: Select highest-priority event per patient per encounter date
 INSERT INTO [dbo].[PressGaneyFinalSurveyFile]

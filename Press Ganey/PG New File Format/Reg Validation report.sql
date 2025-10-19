@@ -8,22 +8,55 @@ USE [ETLProcedureRepository]
 -- =============================================
 SELECT 
     reg.PatientEnterpriseID,
-    reg.ServiceDate,
+    reg.ServiceDate as Reg_ServiceDate,
     reg.file_type AS RegulatorySurveyType,
     nonreg.file_type AS NonRegSurveyType,
     --reg.SurveySentDate AS RegulatorySentDate,
-    nonreg.SurveySentDate AS NonRegSentDate,
+    nonreg.ServiceDate AS NonRegServiceDate,
     nonreg.notes AS NonRegNotes
 FROM dbo.PressGaney_TrackingRecords reg
 INNER JOIN dbo.PressGaney_TrackingRecords_NFF nonreg
     ON reg.PatientEnterpriseID = nonreg.PatientEnterpriseID
-    AND REPLACE(CONVERT(VARCHAR, nonreg.ServiceDate, 120), '\', '') = REPLACE(CONVERT(VARCHAR, reg.ServiceDate, 120), '\', '')
+    AND nonreg.ServiceDate =  reg.ServiceDate
 WHERE reg.file_type IN ('OASCAHPS', 'HCAHPS')
   AND nonreg.file_type NOT IN ('OASCAHPS', 'HCAHPS')
-  AND nonreg.SurveySentDate IS NOT NULL
+  --AND nonreg.SurveySentDate IS NOT NULL
 ORDER BY reg.PatientEnterpriseID, reg.ServiceDate
 
 
+--Select * from dbo.PressGaney_TrackingRecords_NFF
+
+
+-- =============================================
+-- Unified Survey Report: Sent Status, Type, and Metadata
+-- =============================================
+--SELECT 
+--    COALESCE(reg.PatientEnterpriseID, nonreg.PatientEnterpriseID, archive.[Medical Record Number]) AS PatientEnterpriseID,
+--    COALESCE(reg.ServiceDate, nonreg.ServiceDate, archive.[Visit or Admit Date]) AS ServiceDate,
+--    COALESCE(reg.file_type, nonreg.file_type, archive.[Survey Designator]) AS SurveyType,
+--    archive.[Survey Designator],
+--    archive.[Unique ID],
+--    archive.[SentStatus],
+--    COALESCE(reg.created_date, nonreg.SurveySentDate, archive.CreatedDate) AS SurveySentDate,
+--    --COALESCE(reg.notes, nonreg.notes, archive.notes) AS Notes,
+--    archive.[Department Name],
+--    archive.[Location Name],
+--    archive.[Attending Physician Name],
+--    archive.[CreatedDate]
+
+--FROM [ETLProcedureRepository].[dbo].[PressGaneyDailyFile_Archive] archive
+--LEFT JOIN dbo.PressGaney_TrackingRecords reg
+--    ON archive.[Medical Record Number] = reg.PatientEnterpriseID
+--    AND archive.[Visit or Admit Date] = reg.ServiceDate
+--LEFT JOIN [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF] nonreg
+--    ON archive.[Unique ID] = nonreg.[unique_ID]
+--ORDER BY PatientEnterpriseID, ServiceDate;
+
+
+
+
+
+--Select *  FROM dbo.PressGaney_TrackingRecords where PatientEnterpriseID  is not null
 
 ---- =============================================
 ---- Section 1: Missing Final Survey Records
