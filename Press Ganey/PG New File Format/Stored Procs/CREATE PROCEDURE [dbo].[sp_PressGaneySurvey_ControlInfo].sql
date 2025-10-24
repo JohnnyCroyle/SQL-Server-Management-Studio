@@ -18,8 +18,15 @@ BEGIN
 	-- interfering with SELECT statements.
 	SET NOCOUNT ON;
 
-	SELECT CAST(FORMAT(getdate()-82 , 'MM/dd/yyyy') as varchar(10)) AS StartDate, 
-	CAST(FORMAT(getdate() - 11, 'MM/dd/yyyy') as varchar(10)) as EndDate, FilePath,ErrorPath,ServerName  from PressGaneyControlTable
+	SELECT CAST(FORMAT(getdate()-31 , 'MM/dd/yyyy') as varchar(10)) AS StartDate, 
+	CAST(FORMAT(getdate() - 1, 'MM/dd/yyyy') as varchar(10)) as EndDate, file_path as FilePath,error_file_path as  ErrorPath,datasource as ServerName  from EpicExtracts_FileInfo
+	Where package_name = 'PressGaneyEngineProcess'
+
+--For UAT TESTING
+	--SELECT CAST(FORMAT(getdate()-31 , 'MM/dd/yyyy') as varchar(10)) AS StartDate, 
+	--CAST(FORMAT(getdate() - 1, 'MM/dd/yyyy') as varchar(10)) as EndDate, file_path as FilePath,error_file_path as  ErrorPath, datasource as ServerName  from EpicExtracts_FileInfo
+	--Where package_name = 'PressGaneyEngineProcess'
+
 
 
 END
