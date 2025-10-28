@@ -88,14 +88,28 @@ BEGIN
     -- FilePath: Source directory for Press Ganey files
     -- ErrorPath: Directory for error/failed files
     -- ServerName: Target server for data processing
-    SELECT 
-        CAST(FORMAT(GETDATE() - 31, 'MM/dd/yyyy') AS VARCHAR(10)) AS StartDate,     -- Data extraction start date (31 days back)
-        CAST(FORMAT(GETDATE() - 1, 'MM/dd/yyyy') AS VARCHAR(10)) AS EndDate,       -- Data extraction end date (yesterday)
-        file_path AS FilePath,                                                      -- Source file directory
-        error_file_path AS ErrorPath,                                               -- Error file directory
-        datasource AS ServerName                                                    -- Target server name
-    FROM EpicExtracts_FileInfo
-    WHERE package_name = 'PressGaneyEngineProcess'                                  -- Filter for Press Ganey package configuration
+
+	--PROD
+    --SELECT 
+    --    CAST(FORMAT(GETDATE() - 31, 'MM/dd/yyyy') AS VARCHAR(10)) AS StartDate,     -- Data extraction start date (31 days back)
+    --    CAST(FORMAT(GETDATE() - 1, 'MM/dd/yyyy') AS VARCHAR(10)) AS EndDate,       -- Data extraction end date (yesterday)
+    --    file_path AS FilePath,                                                      -- Source file directory
+    --    error_file_path AS ErrorPath,                                               -- Error file directory
+    --    datasource AS ServerName                                                    -- Target server name
+    --FROM EpicExtracts_FileInfo
+    --WHERE package_name = 'PressGaneyEngineProcess'                                  -- Filter for Press Ganey package configuration
+
+
+	--UPDATE FILE
+	SELECT '08/01/2025' AS StartDate, 
+	'10/11/2025' as EndDate, file_path as FilePath,error_file_path as  ErrorPath,datasource as ServerName  from EpicExtracts_FileInfo
+	Where package_name = 'PressGaneyEngineProcess'
+
+	----BACK LOAD FILE
+	--SELECT '10/12/2025' AS StartDate, 
+	--'10/11/2025' as EndDate, file_path as FilePath,error_file_path as  ErrorPath,datasource as ServerName  from EpicExtracts_FileInfo
+	--Where package_name = 'PressGaneyEngineProcess'
+
 END
 GO
 

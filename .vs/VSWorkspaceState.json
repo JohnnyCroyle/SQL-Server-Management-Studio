@@ -3,10 +3,11 @@
     "",
     "\\Press Ganey",
     "\\Press Ganey\\PG New File Format",
+    "\\Press Ganey\\PG New File Format\\Scripts for PROD",
     "\\Press Ganey\\PG New File Format\\Stored Procs",
     "\\Press Ganey\\PG New File Format\\Tables",
     "\\Press Ganey\\PG New File Format\\Used Code"
   ],
-  "SelectedNode": "\\Press Ganey\\PG New File Format\\Control to call Stored Procs.sql",
+  "SelectedNode": "\\Press Ganey\\PG New File Format\\Scripts for PROD\\1 - COGITORPTP2 - TABLES - Press Ganey Survey Engine database scripts.sql",
   "PreviewInSolutionExplorer": false
 }

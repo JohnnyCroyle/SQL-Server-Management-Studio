@@ -10,19 +10,54 @@ GO
 /*-- =============================================
 ------ Author:		Johnny Croyle
 ------ Create date: 10/11/2025
------- Description:	get dataset for Press Ganey's New File Format for Survey's
------- This pull will be Encounter based
------- and will include all services
------- for MaineHealth
-------
------- NICU - TODO - NEED SURVEY Designator
------- This is a survey file for the new format
------- for Press Ganey
-
------- For questions or updates, contact Johnny Croyle.
+------ Description:	Extract dataset for Press Ganey's New File Format for Neonatal Intensive Care Unit Surveys
+------ 
+------ SPECIFICATIONS:
+------ • Survey Type: Neonatal Intensive Care Unit (NC0101)
+------ • Data Source: Hospital encounters with Neonatology specialty
+------ • File Format: Press Ganey New File Format (NFF) per ITTI specification
+------ • Service Area: MaineHealth (ServiceAreaEpicId = '110')
+------ 
+------ FEATURES IMPLEMENTED:
+------ • Encounter-based data extraction for all NICU services
+------ • Pediatric-specific filtering (patients under 18 years old)
+------ • Standardized race/ethnicity mapping per Press Ganey requirements
+------ • Mobile phone number extraction from patient communication records
+------ • Primary and secondary diagnosis codes (ICD-10-CM format)
+------ • Provider information including NPI and specialty
+------ • Department and location mapping with Press Ganey client IDs
+------ • Language preference mapping to Press Ganey language codes
+------ • Duplicate prevention using tracking table
+------ • Self-correcting date range for disaster recovery scenarios
+------ 
+------ DATA QUALITY CONTROLS:
+------ • Filters out deceased patients and incomplete encounters
+------ • Restricts to pediatric population (age < 18 years)
+------ • Handles NULL values with appropriate defaults
+------ • Validates date formats (MMddyyyy) and time formats (HHMM)
+------ • Implements proper race/ethnicity categorization
+------ • Ensures unique encounter processing
+------ • Filters for Neonatology department specialty only
+------ 
+------ OUTPUT DESTINATION:
+------ • Primary: [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+------ • Tracking: [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
+------ 
+------ ERROR HANDLING:
+------ • Comprehensive try-catch with error logging
+------ • Procedure name tracking for audit purposes
+------ • Exception re-throwing for upstream handling
+------ 
+------ MAINTENANCE NOTES:
+------ • Update survey designator mappings as needed for new surveys
+------ • Modify address fields when Press Ganey updates file format specifications
+------ • Review race/ethnicity mappings annually for compliance
+------ • Coordinate with Press Ganey team for file format changes
+------ • Monitor neonatal patient population trends for data validation
+------ 
+------ CONTACT: Johnny Croyle for questions, updates, or troubleshooting
 ------ =============================================*/
 
------- =============================================*/
 ALTER PROCEDURE [dbo].[sp_PressGaney_NC0101_NICU] 
 	@StartDate varchar(10),
 	@EndDate varchar(10)
@@ -71,7 +106,7 @@ DROP TABLE #PressGaneyFile;
 -- We will use a CTE to get the patient encounters and then join with other tables as needed
    
         ;WITH PatientEncounters AS (
-			--Encounter type = Hospital Encounter AND Department Specialty = Neonatology�
+			--Encounter type = Hospital Encounter AND Department Specialty = Neonatology�
 			SELECT DISTINCT
 				en.type as EncounterType,
 				dep.DepartmentSpecialty,

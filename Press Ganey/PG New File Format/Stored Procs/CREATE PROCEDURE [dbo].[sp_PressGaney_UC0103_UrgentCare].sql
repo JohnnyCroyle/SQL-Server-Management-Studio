@@ -9,31 +9,50 @@ GO
 
 /*-- =============================================
 ------ Author:		Johnny Croyle
------- Create date: 08/13/2025
------- Description:	get dataset for Press Ganey's New File Format for Survey's
------- This pull will be Encounter based
------- and will include all services
------- for MaineHealth
-------
------- URGENT CARE - Adult - UC0103, Peds UC0104 
------- This is a test file for the new format
------- for Press Ganey
------- Added Ethnicity and Race code base on the new Press Ganey file format ITTI specification document. 8/22/2025
------- Added Mobile Number to the file. 8/22/2025  
------- Added CPT codes to the file. 8/22/2025
------- Modified the file to include the new Press Ganey file format for Outpatient Pharmacy Visits. 8/22/2025
-------
------- This procedure extracts patient encounter data for rehabilitation services,
------- including demographic, provider, department, and visit details.
------- It applies Press Ganey formatting rules for race, ethnicity, and language.
------- Mobile numbers and up to six CPT procedure codes are included per encounter.
------- The procedure ensures only new records are sent by tracking unique IDs.
------- Output is inserted into the Press Ganey daily file table for downstream processing.
------- Error handling is implemented to log issues and rethrow exceptions.
------- Please update survey designator and address fields as needed for future file format changes.
------- For questions or updates, contact Johnny Croyle.
------- =============================================*/
-
+------ Create date: 10/25/2025
+------ Description:	Extract dataset for Press Ganey's New File Format for Emergency Department Surveys
+------ 
+------ SPECIFICATIONS:
+------ • Survey Type: Emergency Department - Adult (ER0101) and Pediatric (PE0101)
+------ • Data Source: Hospital encounters with Emergency Medicine specialty
+------ • File Format: Press Ganey New File Format (NFF) per ITTI specification
+------ • Service Area: MaineHealth (ServiceAreaEpicId = '110')
+------ 
+------ FEATURES IMPLEMENTED:
+------ • Encounter-based data extraction for all Emergency Department services
+------ • Age-based survey designation (Adult ER0101 vs Pediatric PE0101)
+------ • Standardized race/ethnicity mapping per Press Ganey requirements
+------ • Mobile phone number extraction from patient communication records
+------ • Primary and secondary diagnosis codes (ICD-10-CM format)
+------ • Provider information including NPI and specialty
+------ • Department and location mapping with Press Ganey client IDs
+------ • Language preference mapping to Press Ganey language codes
+------ • Duplicate prevention using tracking table
+------ • Self-correcting date range for disaster recovery scenarios
+------ 
+------ DATA QUALITY CONTROLS:
+------ • Filters out deceased patients and incomplete encounters
+------ • Handles NULL values with appropriate defaults
+------ • Validates date formats (MMddyyyy) and time formats (HHMM)
+------ • Implements proper race/ethnicity categorization
+------ • Ensures unique encounter processing
+------ 
+------ OUTPUT DESTINATION:
+------ • Primary: [ETLProcedureRepository].[dbo].[PressGaneyDailyFile]
+------ • Tracking: [ETLProcedureRepository].[dbo].[PressGaney_TrackingRecords_NFF]
+------ 
+------ ERROR HANDLING:
+------ • Comprehensive try-catch with error logging
+------ • Procedure name tracking for audit purposes
+------ • Exception re-throwing for upstream handling
+------ 
+------ MAINTENANCE NOTES:
+------ • Update survey designator mappings as needed for new surveys
+------ • Modify address fields when Press Ganey updates file format specifications
+------ • Review race/ethnicity mappings annually for compliance
+------ • Coordinate with Press Ganey team for file format changes
+------ 
+------ CONTACT: Johnny Croyle for questions, updates, or troubleshooting
 ------ =============================================*/
 ALTER PROCEDURE [dbo].[sp_PressGaney_UC0103_UrgentCare] 
 	@StartDate varchar(10),
